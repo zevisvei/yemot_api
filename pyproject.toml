@@ -1,11 +1,11 @@
 [project]
 name = "yemot-api"
-version = "0.1.1"
+version = "0.1.2"
 license = { text = "GPL-3.0-or-later" }
 classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
 ]
-description = "Add your description here"
+description = "python client for yemot api module and yemot rest api"
 readme = "README.md"
 authors = [
     { name = "zevisvei", email = "zszszszs491@gmail.com" }
@@ -22,3 +22,9 @@ yemot-api = "yemot_api:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+[project.urls]
+Homepage = "https://github.com/zevisvei/yemot_api"
+Issues = "https://github.com/zevisvei/yemot_api/issues"
+[tool.ruff.lint]
+ignore = ["T201", "Q000", "E501", "D100", "D103", "PLW0603", "D102", "D101", "COM812", "D107"]
+extend-select = ["ALL"]

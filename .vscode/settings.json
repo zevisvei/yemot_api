@@ -1,0 +1,28 @@
+{
+    "python.analysis.typeCheckingMode": "standard",
+    "python.analysis.autoFormatStrings": true,
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.useLibraryCodeForTypes": true,
+    "python.analysis.inlayHints.variableTypes": true,
+    "python.analysis.inlayHints.callArgumentNames": "all",
+    "python.analysis.inlayHints.functionReturnTypes": true,
+    "autopep8.args": [
+        "--max-line-length=300000",
+        "--ignore=E501"
+    ],
+    "ruff.fixAll": false,
+    "ruff.configuration": "${workspaceFolder}/pyproject.toml",
+    "ruff.enable": true,
+    "ruff.lint.enable": true,
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "ms-python.autopep8",
+        "editor.codeActionsOnSave": {
+            "source.organizeImports.ruff": "explicit",
+        }
+    },
+    "cSpell.language": "en,he",
+    "cSpell.words": [
+        "yemot"
+    ]
+}
