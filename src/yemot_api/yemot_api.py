@@ -1377,8 +1377,10 @@ class Yemot:
         params = {
             "path": f"{base_path}{path}"
         }
-        response = self._get(end_point, params)
-        return response["folderExists"]
+        response = self._session.get(f"{self.BASE_URL}{end_point}", params={**self.params, **params}).json()
+        if "folderExists" in response:
+            return response["folderExists"]
+        raise YemotAPIError(response["responseStatus"], **response)
 
     def create_sip_account(self, ext_number: int | None = None) -> types.CreateSipAccount:
         """https://f2.freeivr.co.il/post/91611 ."""
