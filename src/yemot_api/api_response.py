@@ -1,4 +1,6 @@
+import re
 from collections.abc import Iterable
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Literal, overload
 
@@ -19,6 +21,11 @@ def _true_to_str(value: bool | Literal["yes"] | None) -> str:
 
 def _remove_extra_commas(value: str) -> str:
     return value.rstrip(",")
+
+
+def _remove_invalid_chars(text: str) -> str:
+    invalid_chars_regex = r'[.\-"\'&|]'
+    return re.sub(invalid_chars_regex, '', text)
 
 
 def join(*args: str) -> str:
@@ -201,6 +208,74 @@ class IdListMessageType(StrEnum):
 
 def id_list_message(play: IdListMessageType, value: str) -> str:
     result = f"id_list_message={play}-{value}"
+    return _remove_extra_commas(result)
+
+
+def id_list_message_file(value: str) -> str:
+    result = f"id_list_message=f-{value}"
+    return _remove_extra_commas(result)
+
+
+def id_list_message_digits(value: int) -> str:
+    result = f"id_list_message=d-{value}"
+    return _remove_extra_commas(result)
+
+
+def id_list_message_number(value: int) -> str:
+    result = f"id_list_message=n-{value}"
+    return _remove_extra_commas(result)
+
+
+def id_list_message_alpha(value: str) -> str:
+    result = f"id_list_message=a-{value}"
+    return _remove_extra_commas(result)
+
+
+def id_list_message_text(value: str, remove_invalid: bool = True) -> str:
+    if remove_invalid:
+        value = _remove_invalid_chars(value)
+    elif re.search(r'[.\-"\'&|]', value):
+        message = "הטקסט מכיל תווים לא חוקיים: . - \" ' & |"
+        raise YemotApiResponseError(message)
+    result = f"id_list_message=t-{value}"
+    return _remove_extra_commas(result)
+
+
+def id_list_message_speech(file_path: str) -> str:
+    result = f"id_list_message=s-{file_path}"
+    return _remove_extra_commas(result)
+
+
+def id_list_message_system_message(value: str) -> str:
+    result = f"id_list_message=m-{value}"
+    return _remove_extra_commas(result)
+
+
+def id_list_message_go_to_folder(value: str) -> str:
+    result = f"id_list_message=g-{value}"
+    return _remove_extra_commas(result)
+
+
+def id_list_message_noop() -> str:
+    result = "id_list_message=noop"
+    return _remove_extra_commas(result)
+
+
+def id_list_message_date(value: str | date) -> str:
+    if isinstance(value, datetime):
+        value = value.date()
+    if isinstance(value, date):
+        value = value.strftime("%d/%m/%Y")
+    result = f"id_list_message=date-{value}"
+    return _remove_extra_commas(result)
+
+
+def id_list_message_date_h(value: str | date) -> str:
+    if isinstance(value, datetime):
+        value = value.date()
+    if isinstance(value, date):
+        value = value.strftime("%d/%m/%Y")
+    result = f"id_list_message=dateH-{value}"
     return _remove_extra_commas(result)
 
 
