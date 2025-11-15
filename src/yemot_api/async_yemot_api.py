@@ -4,17 +4,17 @@ from types import TracebackType
 from typing import Any, Literal, Self, overload
 from uuid import uuid4
 
-import requests
+import httpx
 
 from . import input_types, types
 from .exceptions import YemotAPIError
 
 __all__ = [
-    "Yemot"
+    "AsyncYemot"
 ]
 
 
-class Yemot:
+class AsyncYemot:
     BASE_URL = "https://www.call2all.co.il/ym/api/"
 
     def __init__(
@@ -22,58 +22,58 @@ class Yemot:
             token: str
     ) -> None:
         self.token = token
-        self._session: requests.Session | None = None
+        self._session: httpx.AsyncClient | None = None
 
-    def close(self) -> None:
+    async def close(self) -> None:
         if self._session:
-            self._session.close()
+            await self._session.aclose()
             self._session = None
 
-    def _get_session(self) -> requests.Session:
+    def _get_session(self) -> httpx.AsyncClient:
         if self._session is None:
-            self._session = requests.Session()
+            self._session = httpx.AsyncClient()
         return self._session
 
-    def _get(self, end_point: str, params: dict[str, Any] | None = None, *, default_params: bool = True) -> dict[Any, Any]:
+    async def _get(self, end_point: str, params: dict[str, Any] | None = None, *, default_params: bool = True) -> dict[Any, Any]:
         if params is None:
             params = {}
         url = f"{self.BASE_URL}{end_point}"
         if default_params:
             params.update(self.params)
         client = self._get_session()
-        response = client.get(url, params=params)
+        response = await client.get(url, params=params)
         json_response = response.json()
         self._check_response(json_response)
         return json_response
 
-    def _post(self, end_point: str, data: dict[str, Any] | None = None) -> dict[Any, Any]:
+    async def _post(self, end_point: str, data: dict[str, Any] | None = None) -> dict[Any, Any]:
         if data is None:
             data = {}
         url = f"{self.BASE_URL}{end_point}"
         data.update(self.params)
         client = self._get_session()
-        response = client.post(url, json=data)
+        response = await client.post(url, json=data)
         json_response = response.json()
         self._check_response(json_response)
         return json_response
 
-    def _post_multipart(self, end_point: str, files: dict[str, Any], data: dict[str, Any] | None = None) -> dict[Any, Any]:
+    async def _post_multipart(self, end_point: str, files: dict[str, Any], data: dict[str, Any] | None = None) -> dict[Any, Any]:
         if data is None:
             data = {}
         url = f"{self.BASE_URL}{end_point}"
         data.update(self.params)
         client = self._get_session()
-        response = client.post(url, files=files, data=data)
+        response = await client.post(url, files=files, data=data)
         json_response = response.json()
         self._check_response(json_response)
         return json_response
 
-    def __enter__(self) -> Self:
+    async def __aenter__(self) -> Self:
         return self
 
-    def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None) -> None:
+    async def __aexit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None) -> None:
         if self._session:
-            self._session.close()
+            await self._session.aclose()
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, self.__class__):
@@ -130,44 +130,44 @@ class Yemot:
             return dt.strftime("%Y-%m-%d %H:%M:%S")
         return None
 
-    def login(self, user_name: str, password: str) -> str:
+    async def login(self, user_name: str, password: str) -> str:
         """https://f2.freeivr.co.il/post/24253 ."""
         end_point = "Login"
         params = {
             "username": user_name,
             "password": password
         }
-        response = self._get(end_point, params, default_params=False)
+        response = await self._get(end_point, params, default_params=False)
         token = response["token"]
         self.token = token
         return token
 
-    def logout(self) -> bool:
+    async def logout(self) -> bool:
         """https://f2.freeivr.co.il/post/24259 ."""
         end_point = "Logout"
         params = {
             "token": self.token
         }
-        response = self._get(end_point, params, default_params=False)
+        response = await self._get(end_point, params, default_params=False)
         return response["responseStatus"] == "OK"
 
-    def get_session(self) -> types.GetSession:
+    async def get_session(self) -> types.GetSession:
         """https://f2.freeivr.co.il/post/24262 ."""
         end_point = "GetSession"
-        response = self._get(end_point)
+        response = await self._get(end_point)
         return types.GetSession(**response)
 
-    def set_password(self, new_password: str, password: str) -> bool:
+    async def set_password(self, new_password: str, password: str) -> bool:
         """https://f2.freeivr.co.il/post/24341 ."""
         end_point = "SetPassword"
         params = {
             "newPassword": new_password,
             "password": password
         }
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return response["responseStatus"] == "OK"
 
-    def set_customer_details(
+    async def set_customer_details(
         self,
         name: str | None = None,
         email: str | None = None,
@@ -194,10 +194,10 @@ class Yemot:
             "accessPassword": access_password,
             "recordPassword": record_password
         }
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return response["responseStatus"] == "OK"
 
-    def get_transactions(
+    async def get_transactions(
         self,
         from_: str | None = None,
         limit: int | None = None,
@@ -210,26 +210,26 @@ class Yemot:
             "limit": limit,
             "filter": filter_
         }
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return types.GetTransactions(**response)
 
-    def transfer_units(self, destination: str, amount: int) -> types.TransferUnits:
+    async def transfer_units(self, destination: str, amount: int) -> types.TransferUnits:
         """https://f2.freeivr.co.il/post/25135 ."""
         end_point = "TransferUnits"
         params = {
             "destination": destination,
             "amount": amount
         }
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return types.TransferUnits(**response)
 
-    def get_incoming_calls(self) -> types.GetIncomingCalls:
+    async def get_incoming_calls(self) -> types.GetIncomingCalls:
         """https://f2.freeivr.co.il/post/25141 ."""
         end_point = "GetIncomingCalls"
-        response = self._get(end_point, self.params)
+        response = await self._get(end_point, self.params)
         return types.GetIncomingCalls(**response)
 
-    def upload_file(
+    async def upload_file(
         self,
         path: str,
         blob: bytes,
@@ -244,10 +244,10 @@ class Yemot:
         chunk_size = 49 * 1024 * 1024
         chunks = [blob[offset:offset + chunk_size] for offset in range(0, total_size, chunk_size)]
         if len(chunks) == 1:
-            return self._upload_small_file(path, blob, file_name, base_path, convert_audio, auto_numbering=auto_numbering, tts=tts)
-        return self._upload_large_file(path, chunks, file_name, total_size, base_path, convert_audio=convert_audio, auto_numbering=auto_numbering, tts=tts)
+            return await self._upload_small_file(path, blob, file_name, base_path, convert_audio, auto_numbering=auto_numbering, tts=tts)
+        return await self._upload_large_file(path, chunks, file_name, total_size, base_path, convert_audio=convert_audio, auto_numbering=auto_numbering, tts=tts)
 
-    def _upload_small_file(
+    async def _upload_small_file(
         self,
         path: str,
         blob: bytes,
@@ -267,10 +267,10 @@ class Yemot:
         if tts is not None:
             data["tts"] = int(tts)
         files = {"file": (file_name, blob)}
-        response = self._post_multipart("UploadFile", files=files, data=data)
+        response = await self._post_multipart("UploadFile", files=files, data=data)
         return types.UploadFile(**response)
 
-    def _upload_large_file(
+    async def _upload_large_file(
         self,
         path: str,
         chunks: list[bytes],
@@ -309,7 +309,7 @@ class Yemot:
             url = f"{self.BASE_URL}{end_point}"
             data.update(self.params)
             client = self._get_session()
-            response = client.post(url, files=files, data=data).json()
+            response = (await client.post(url, files=files, data=data)).json()
             if "success" not in response or not response["success"]:
                 raise YemotAPIError("error", None, response.get("error", "Unknown error"))
             offset += len(chunk)
@@ -330,10 +330,10 @@ class Yemot:
             data["tts"] = int(tts)
         data.update(self.params)
         client = self._get_session()
-        response = client.post(f"{self.BASE_URL}UploadFile?done", data=data).json()
+        response = (await client.post(f"{self.BASE_URL}UploadFile?done", data=data)).json()
         return types.UploadFile(**response)
 
-    def download_file(self, path: str, base_path: str = "ivr2:/") -> bytes:
+    async def download_file(self, path: str, base_path: str = "ivr2:/") -> bytes:
         """https://f2.freeivr.co.il/post/32032 ."""
         params = {
             "path": f"{base_path}{path}"
@@ -341,7 +341,7 @@ class Yemot:
         params.update(self.params)
         url = f"{self.BASE_URL}DownloadFile"
         client = self._get_session()
-        response = client.get(url, params=params)
+        response = await client.get(url, params=params)
         content_type = response.headers.get("Content-Type")
         if content_type == "application/octet-stream":
             return response.content
@@ -354,13 +354,13 @@ class Yemot:
             response.text
         )
 
-    def get_templates(self) -> types.GetTemplates:
+    async def get_templates(self) -> types.GetTemplates:
         """https://f2.freeivr.co.il/post/32033 ."""
         end_point = "GetTemplates"
-        response = self._get(end_point=end_point)
+        response = await self._get(end_point=end_point)
         return types.GetTemplates(**response)
 
-    def update_template(
+    async def update_template(
         self,
         template_id: int,
         description: str | None = None,
@@ -404,37 +404,37 @@ class Yemot:
             "removeRequest": remove_request,
         }
         params = self._filter_params(bool_to_int, other_params)
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return types.GetTemplates(**response)
 
-    def create_template(self, description: str) -> int:
+    async def create_template(self, description: str) -> int:
         """https://f2.freeivr.co.il/post/32037 ."""
         end_point = "CreateTemplate"
         params = {
             "description": description
         }
-        response = self._get(end_point=end_point, params=params)
+        response = await self._get(end_point=end_point, params=params)
         return response["templateId"]
 
-    def delete_template(self, template_id: int | str) -> bool:
+    async def delete_template(self, template_id: int | str) -> bool:
         """https://f2.freeivr.co.il/post/32038 ."""
         end_point = "DeleteTemplate"
         params = {
             "templateId": template_id
         }
-        response = self._get(end_point=end_point, params=params)
+        response = await self._get(end_point=end_point, params=params)
         return response["responseStatus"] == "OK"
 
-    def get_template_entries(self, template_id: str | int) -> types.GetTemplateEntries:
+    async def get_template_entries(self, template_id: str | int) -> types.GetTemplateEntries:
         """https://f2.freeivr.co.il/post/32039 ."""
         end_point = "GetTemplateEntries"
         params = {
             "templateId": template_id
         }
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return types.GetTemplateEntries(**response)
 
-    def update_template_entry(
+    async def update_template_entry(
         self,
         template_id: int,
         row_id: int,
@@ -457,10 +457,10 @@ class Yemot:
             "moreinfo": more_info
         }
         params = self._filter_params(bool_to_int_params=bool_to_int, other_params=other_params)
-        response = self._get(end_point=end_point, params=params)
+        response = await self._get(end_point=end_point, params=params)
         return response["responseStatus"] == "OK"
 
-    def update_template_entries(self, template_id: int, row_ids: list[int], action: input_types.UpdateTemplateEntries) -> bool:
+    async def update_template_entries(self, template_id: int, row_ids: list[int], action: input_types.UpdateTemplateEntries) -> bool:
         """https://f2.freeivr.co.il/post/32041 ."""
         end_point = "UpdateTemplateEntries"
         params = {
@@ -468,19 +468,19 @@ class Yemot:
             "rowids": "-".join(map(str, row_ids)),
             "action": action
         }
-        response = self._post(end_point=end_point, data=params)
+        response = await self._post(end_point=end_point, data=params)
         return response["responseStatus"] == "OK"
 
-    def clear_template_entries(self, template_id: int) -> bool:
+    async def clear_template_entries(self, template_id: int) -> bool:
         """https://f2.freeivr.co.il/post/32042 ."""
         end_point = "ClearTemplateEntries"
         params = {
             "templateId": template_id
         }
-        response = self._get(end_point=end_point, params=params)
+        response = await self._get(end_point=end_point, params=params)
         return response["responseStatus"] == "OK"
 
-    def upload_phone_list(
+    async def upload_phone_list(
         self,
         data: list[str],
         template_id: int,
@@ -503,10 +503,10 @@ class Yemot:
             "updateType": update_type
         }
         payload = self._filter_params(bool_to_int_params, other_params)
-        response = self._post(end_point=end_point, data=payload)
+        response = await self._post(end_point=end_point, data=payload)
         return types.UploadPhoneList(**response)
 
-    def run_campaign(
+    async def run_campaign(
             self,
             template_id: int | None = None,
             caller_id: str | None = None,
@@ -530,10 +530,10 @@ class Yemot:
             "templateId": template_id
         }
         params = self._filter_params(bool_to_int, other_params)
-        response = self._post(end_point=end_point, data=params)
+        response = await self._post(end_point=end_point, data=params)
         return types.RunCampaign(**response)
 
-    def get_campaign_status(
+    async def get_campaign_status(
         self,
         campaign_id: str,
         entries: input_types.CampaignStatusEntries | None = None,
@@ -555,10 +555,10 @@ class Yemot:
             "range": range_param
         }
         params = self._filter_params(other_params=other_params)
-        response = self._get(end_point=end_point, params=params)
+        response = await self._get(end_point=end_point, params=params)
         return types.CampaignStatus(**response)
 
-    def download_campaign_report(self, campaign_id: str) -> str:
+    async def download_campaign_report(self, campaign_id: str) -> str:
         """https://f2.freeivr.co.il/post/32046 ."""
         end_point = "DownloadCampaignReport"
         params = {
@@ -566,7 +566,7 @@ class Yemot:
         }
         params.update(self.params)
         client = self._get_session()
-        response = client.get(f"{self.BASE_URL}{end_point}", params=params)
+        response = await client.get(f"{self.BASE_URL}{end_point}", params=params)
         if response.status_code == 200:
             if response.headers.get("Content-Type") == "application/json; charset=utf-8":
                 json_error = response.json()
@@ -574,14 +574,14 @@ class Yemot:
             return response.text
         raise YemotAPIError("ERROR", response.status_code, response.text)
 
-    def get_active_campaigns(self) -> types.GetActiveCampaigns:
+    async def get_active_campaigns(self) -> types.GetActiveCampaigns:
         """https://f2.freeivr.co.il/post/32047 ."""
         end_point = "GetActiveCampaigns"
-        response = self._get(end_point=end_point)
+        response = await self._get(end_point=end_point)
         return types.GetActiveCampaigns(**response)
 
     @overload
-    def campaign_action(
+    async def campaign_action(
         self,
         campaign_id: str,
         action: Literal[input_types.CampaignAction.ADD, input_types.CampaignAction.BLOCK, input_types.CampaignAction.HANGUP],
@@ -590,11 +590,11 @@ class Yemot:
         ...
 
     @overload
-    def campaign_action(self, campaign_id: str, action: Literal[input_types.CampaignAction.STOP]) -> types.CampaignAction:
+    async def campaign_action(self, campaign_id: str, action: Literal[input_types.CampaignAction.STOP]) -> types.CampaignAction:
         ...
 
     @overload
-    def campaign_action(
+    async def campaign_action(
         self,
         campaign_id: str,
         action: Literal[input_types.CampaignAction.SET_PAUSED],
@@ -603,7 +603,7 @@ class Yemot:
         ...
 
     @overload
-    def campaign_action(
+    async def campaign_action(
         self,
         campaign_id: str,
         action: Literal[input_types.CampaignAction.SET_MAX_ACTIVE_CHANNELS, input_types.CampaignAction.SET_MAX_BRIDGED_CHANNELS],
@@ -611,7 +611,7 @@ class Yemot:
     ) -> types.CampaignAction:
         ...
 
-    def campaign_action(
+    async def campaign_action(
         self,
         campaign_id: str,
         action: input_types.CampaignAction,
@@ -634,20 +634,20 @@ class Yemot:
             "value": param_value
         }
         params = self._filter_params(bool_to_int_params, other_params)
-        response = self._post(end_point=end_point, data=params)
+        response = await self._post(end_point=end_point, data=params)
         return types.CampaignAction(**response)
 
-    def schedule_campaign(self, template_id: int, time: str) -> types.ScheduleCampaign:
+    async def schedule_campaign(self, template_id: int, time: str) -> types.ScheduleCampaign:
         """https://f2.freeivr.co.il/post/32049 ."""
         end_point = "ScheduleCampaign"
         params = {
             "templateId": template_id,
             "time": time
         }
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return types.ScheduleCampaign(**response)
 
-    def get_scheduled_campaigns(
+    async def get_scheduled_campaigns(
             self,
             type_: Literal["PENDING", "SUCCESSFUL", "FAILED"],
             order: Literal["asc", "desc"],
@@ -663,19 +663,19 @@ class Yemot:
             "limit": limit
         }
         params = self._filter_params(other_params=other_params)
-        response = self._get(end_point=end_point, params=params)
+        response = await self._get(end_point=end_point, params=params)
         return types.GetScheduledCampaigns(**response)
 
-    def delete_scheduled_campaign(self, sche_did: int) -> bool:
+    async def delete_scheduled_campaign(self, sche_did: int) -> bool:
         """https://f2.freeivr.co.il/post/32051 ."""
         end_point = "DeleteScheduledCampaign"
         params = {
             "schedId": sche_did
         }
-        response = self._get(end_point=end_point, params=params)
+        response = await self._get(end_point=end_point, params=params)
         return response["responseStatus"] == "OK"
 
-    def get_ivr2_dir(
+    async def get_ivr2_dir(
         self,
         path: str,
         files_from: int = 0,
@@ -693,27 +693,27 @@ class Yemot:
             "orderDir": order_dir
         }
         params = self._filter_params(other_params=other_params)
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return types.GetIvr2Dir(**response)
 
-    def get_file(self, what: str, base_path: str = "ivr2:") -> types.GetFile:
+    async def get_file(self, what: str, base_path: str = "ivr2:") -> types.GetFile:
         """https://f2.freeivr.co.il/post/32053 ."""
         end_point = "GetFile"
         params = {
             "what": f"{base_path}{what}"
         }
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return types.GetFile(**response)
 
     @overload
-    def file_action(self, action: Literal[input_types.FileAction.DELETE], source_path: str, *, base_path: str = "ivr2:") -> types.FileAction:
+    async def file_action(self, action: Literal[input_types.FileAction.DELETE], source_path: str, *, base_path: str = "ivr2:") -> types.FileAction:
         ...
 
     @overload
-    def file_action(self, action: Literal[input_types.FileAction.COPY, input_types.FileAction.MOVE], source_path: str, target: str, *, base_path: str = "ivr2:") -> types.FileAction:
+    async def file_action(self, action: Literal[input_types.FileAction.COPY, input_types.FileAction.MOVE], source_path: str, target: str, *, base_path: str = "ivr2:") -> types.FileAction:
         ...
 
-    def file_action(self, action: input_types.FileAction, source_path: str, target: str | None = None, *, base_path: str = "ivr2:") -> types.FileAction:
+    async def file_action(self, action: input_types.FileAction, source_path: str, target: str | None = None, *, base_path: str = "ivr2:") -> types.FileAction:
         """https://f2.freeivr.co.il/post/32054 ."""
         end_point = "FileAction"
         params = {
@@ -722,40 +722,40 @@ class Yemot:
         }
         if action in [input_types.FileAction.COPY, input_types.FileAction.MOVE]:
             params["target"] = f"{base_path}{target}"
-        response = self._post(end_point, data=params)
+        response = await self._post(end_point, data=params)
         return types.FileAction(**response)
 
-    def get_text_file(self, path: str, base_path: str = "ivr2:/") -> types.GetTextFile:
+    async def get_text_file(self, path: str, base_path: str = "ivr2:/") -> types.GetTextFile:
         """https://f2.freeivr.co.il/post/32055 ."""
         end_point = "GetTextFile"
         params = {
             "what": f"{base_path}{path}",
         }
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return types.GetTextFile(**response)
 
-    def upload_text_file(self, path: str, text: str, base_path: str = "ivr2:/") -> bool:
+    async def upload_text_file(self, path: str, text: str, base_path: str = "ivr2:/") -> bool:
         """https://f2.freeivr.co.il/post/32056 ."""
         end_point = "UploadTextFile"
         params = {
             "what": f"{base_path}{path}",
             "contents": text
         }
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return response["responseStatus"] == "OK"
 
-    def update_extension(self, path: str | int, base_path: str = "ivr2:/", **settings: str) -> bool:
+    async def update_extension(self, path: str | int, base_path: str = "ivr2:/", **settings: str) -> bool:
         """https://f2.freeivr.co.il/post/32060 ."""
         end_point = "UpdateExtension"
         params = {
             "path": f"{base_path}{path}"
         }
         settings.update(params)
-        response = self._post(end_point, settings)
+        response = await self._post(end_point, settings)
         return response["responseStatus"] == "OK"
 
     @overload
-    def call_action(
+    async def call_action(
         self,
         ids: list[str],
         action: Literal[
@@ -770,7 +770,7 @@ class Yemot:
         ...
 
     @overload
-    def call_action(
+    async def call_action(
         self,
         ids: list[str],
         action: Literal[
@@ -783,17 +783,17 @@ class Yemot:
     ) -> types.CallAction:
         ...
 
-    def call_action(self, ids: list[str], action: input_types.CallAction, value: str = "") -> types.CallAction:
+    async def call_action(self, ids: list[str], action: input_types.CallAction, value: str = "") -> types.CallAction:
         """https://f2.freeivr.co.il/post/52054 ."""
         end_point = "CallAction"
         params = {
             "ids": ":".join(ids),
             "action": f"{action}{value}"
         }
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return types.CallAction(**response)
 
-    def get_incoming_sum(self, from_date: str | date | None = None, to_date: str | date | None = None) -> types.GetIncomingSum:
+    async def get_incoming_sum(self, from_date: str | date | None = None, to_date: str | date | None = None) -> types.GetIncomingSum:
         """https://f2.freeivr.co.il/post/53911 ."""
         end_point = "GetIncomingSum"
         other_params = {
@@ -801,30 +801,30 @@ class Yemot:
             "to": self._to_iso_date(to_date)
         }
         params = self._filter_params(other_params=other_params)
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return types.GetIncomingSum(**response)
 
-    def get_sms_out_log(self, limit: int | None = None) -> types.GetSmsOutLog:
+    async def get_sms_out_log(self, limit: int | None = None) -> types.GetSmsOutLog:
         """https://f2.freeivr.co.il/post/63910 ."""
         end_point = "GetSmsOutLog"
         params = {}
         if limit is not None:
             params["limit"] = limit
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return types.GetSmsOutLog(**response)
 
-    def validation_token(self) -> types.ValidationToken:
+    async def validation_token(self) -> types.ValidationToken:
         """https://f2.freeivr.co.il/post/64050 ."""
         end_point = "ValidationToken"
-        response = self._get(end_point)
+        response = await self._get(end_point)
         return types.ValidationToken(**response)
 
     @overload
-    def double_auth(self, action: Literal[input_types.DoubleAuthAction.SEND_CODE]) -> str: ...
+    async def double_auth(self, action: Literal[input_types.DoubleAuthAction.SEND_CODE]) -> str: ...
     @overload
-    def double_auth(self, action: Literal[input_types.DoubleAuthAction.VERIFY_CODE], code: str) -> bool: ...
+    async def double_auth(self, action: Literal[input_types.DoubleAuthAction.VERIFY_CODE], code: str) -> bool: ...
 
-    def double_auth(self, action: input_types.DoubleAuthAction, code: str | None = None) -> str | bool:
+    async def double_auth(self, action: input_types.DoubleAuthAction, code: str | None = None) -> str | bool:
         """https://f2.freeivr.co.il/post/64050 ."""
         end_point = "DoubleAuth"
         params = {
@@ -832,12 +832,12 @@ class Yemot:
         }
         if code is not None:
             params["code"] = code
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         if action == input_types.DoubleAuthAction.SEND_CODE:
             return response["LastNumberToSend"]
         return response["responseStatus"] == "OK"
 
-    def get_login_log(self, limit: int | None = None, user_name: str | None = None) -> types.GetLoginLog:
+    async def get_login_log(self, limit: int | None = None, user_name: str | None = None) -> types.GetLoginLog:
         """https://f2.freeivr.co.il/post/64050 ."""
         end_point = "GetLoginLog"
         other_params = {
@@ -845,39 +845,39 @@ class Yemot:
             "username": user_name
         }
         params = self._filter_params(other_params=other_params)
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return types.GetLoginLog(**response)
 
-    def get_all_sessions(self, limit: int | None = None) -> types.GetAllSessions:
+    async def get_all_sessions(self, limit: int | None = None) -> types.GetAllSessions:
         """https://f2.freeivr.co.il/post/64050 ."""
         end_point = "GetAllSessions"
         params = {"limit": limit} if limit is not None else {}
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return types.GetAllSessions(**response)
 
-    def kill_session(self, session_id: int) -> bool:
+    async def kill_session(self, session_id: int) -> bool:
         """https://f2.freeivr.co.il/post/64050 ."""
         end_point = "KillSession"
         params = {
             "SessionId": session_id
         }
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return response["responseStatus"] == "OK"
 
-    def kill_all_sessions(self) -> bool:
+    async def kill_all_sessions(self) -> bool:
         """https://f2.freeivr.co.il/post/64050 ."""
         end_point = "KillAllSessions"
-        response = self._get(end_point)
+        response = await self._get(end_point)
         return response["responseStatus"] == "OK"
 
     @overload
-    def run_tzintuk(self, method: Literal[input_types.RunTzintukMethod.OTHER], phones: list[str] | input_types.RunTzintukInput1 | input_types.RunTzintukInput2, caller_id: str | None = None, tzintuk_time_out: int | None = None) -> types.RunTzintuk: ...
+    async def run_tzintuk(self, method: Literal[input_types.RunTzintukMethod.OTHER], phones: list[str] | input_types.RunTzintukInput1 | input_types.RunTzintukInput2, caller_id: str | None = None, tzintuk_time_out: int | None = None) -> types.RunTzintuk: ...
     @overload
-    def run_tzintuk(self, method: Literal[input_types.RunTzintukMethod.TPL], phones: int, caller_id: str | None = None, tzintuk_time_out: int | None = None) -> types.RunTzintuk: ...
+    async def run_tzintuk(self, method: Literal[input_types.RunTzintukMethod.TPL], phones: int, caller_id: str | None = None, tzintuk_time_out: int | None = None) -> types.RunTzintuk: ...
     @overload
-    def run_tzintuk(self, method: Literal[input_types.RunTzintukMethod.TZL], phones: list[str], caller_id: str | None = None, tzintuk_time_out: int | None = None) -> types.RunTzintuk: ...
+    async def run_tzintuk(self, method: Literal[input_types.RunTzintukMethod.TZL], phones: list[str], caller_id: str | None = None, tzintuk_time_out: int | None = None) -> types.RunTzintuk: ...
 
-    def run_tzintuk(
+    async def run_tzintuk(
         self,
         method: input_types.RunTzintukMethod,
         phones: list[str] | int | input_types.RunTzintukInput1 | input_types.RunTzintukInput2,
@@ -898,19 +898,19 @@ class Yemot:
         elif method == input_types.RunTzintukMethod.TZL:
             phones_param = {"phones": "tzl:", "tzintukLists": phones}
         params.update(phones_param)
-        response = self._post(end_point, data=params)
+        response = await self._post(end_point, data=params)
         return types.RunTzintuk(**response)
 
     @overload
-    def tzintukim_list_management(self, action: Literal[input_types.TzintukimListManagementAction.GET_LISTS]) -> types.TzintukimListManagementGetLists: ...
+    async def tzintukim_list_management(self, action: Literal[input_types.TzintukimListManagementAction.GET_LISTS]) -> types.TzintukimListManagementGetLists: ...
     @overload
-    def tzintukim_list_management(self, action: Literal[input_types.TzintukimListManagementAction.GET_LIST_ENTRIES], tzintukim_list: str) -> types.TzintukimListManagementGetListEntries: ...
+    async def tzintukim_list_management(self, action: Literal[input_types.TzintukimListManagementAction.GET_LIST_ENTRIES], tzintukim_list: str) -> types.TzintukimListManagementGetListEntries: ...
     @overload
-    def tzintukim_list_management(self, action: Literal[input_types.TzintukimListManagementAction.GET_LOG_LIST], tzintukim_list: str) -> types.TzintukimListManagementGetLogList: ...
+    async def tzintukim_list_management(self, action: Literal[input_types.TzintukimListManagementAction.GET_LOG_LIST], tzintukim_list: str) -> types.TzintukimListManagementGetLogList: ...
     @overload
-    def tzintukim_list_management(self, action: Literal[input_types.TzintukimListManagementAction.RESET_LIST], tzintukim_list: str) -> bool: ...
+    async def tzintukim_list_management(self, action: Literal[input_types.TzintukimListManagementAction.RESET_LIST], tzintukim_list: str) -> bool: ...
 
-    def tzintukim_list_management(self, action: input_types.TzintukimListManagementAction, tzintukim_list: str | None = None) -> types.TzintukimListManagementGetLists | types.TzintukimListManagementGetListEntries | types.TzintukimListManagementGetLogList | bool:
+    async def tzintukim_list_management(self, action: input_types.TzintukimListManagementAction, tzintukim_list: str | None = None) -> types.TzintukimListManagementGetLists | types.TzintukimListManagementGetListEntries | types.TzintukimListManagementGetLogList | bool:
         """https://f2.freeivr.co.il/post/65034 ."""
         end_point = "TzintukimListManagement"
         params = {
@@ -918,7 +918,7 @@ class Yemot:
         }
         if action != input_types.TzintukimListManagementAction.GET_LISTS:
             params["TzintukimList"] = tzintukim_list  # pyright: ignore[reportArgumentType]
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         if action == input_types.TzintukimListManagementAction.GET_LISTS:
             return types.TzintukimListManagementGetLists(**response)
         if action == input_types.TzintukimListManagementAction.GET_LIST_ENTRIES:
@@ -927,7 +927,7 @@ class Yemot:
             return types.TzintukimListManagementGetLogList(**response)
         return response["responseStatus"] == "OK"
 
-    def send_fax(
+    async def send_fax(
         self,
         pdf_file: str | bytes,
         phone: str,
@@ -948,24 +948,24 @@ class Yemot:
             }
             params["pdfFile"] = "UPLOAD"
             # response = self._session.post(f"{self.BASE_URL}{end_point}", data=params, files=files).json()
-            response = self._post_multipart(end_point, data=params, files=files)
+            response = await self._post_multipart(end_point, data=params, files=files)
             # self._check_response(response)
         elif isinstance(pdf_file, str):
             params["pdfFile"] = pdf_file
-            response = self._post(end_point, data=params)
+            response = await self._post(end_point, data=params)
         else:
             raise TypeError("pdf_file must be str or bytes")  # noqa: EM101, TRY003
         return types.SendFax(**response)
 
-    def check_if_file_exists(self, path: str, base_path: str = "ivr2:/") -> bool:
+    async def check_if_file_exists(self, path: str, base_path: str = "ivr2:/") -> bool:
         """https://f2.freeivr.co.il/post/69817 ."""
         end_point = "CheckIfFileExists"
         params = {
             "path": f"{base_path}{path}"
         }
-        return self._get(end_point, params)["fileExists"]
+        return (await self._get(end_point, params))["fileExists"]
 
-    def send_sms(self, message: str, phones: list[str] | str, sender_id: str | None = None, send_flash_message: bool = False) -> types.SendSms:
+    async def send_sms(self, message: str, phones: list[str] | str, sender_id: str | None = None, send_flash_message: bool = False) -> types.SendSms:
         """https://f2.freeivr.co.il/post/71577 ."""
         end_point = "SendSms"
         other_params = {
@@ -977,11 +977,11 @@ class Yemot:
             "sendFlashMessage": send_flash_message
         }
         params = self._filter_params(bool_to_int, other_params)
-        response = self._post(end_point, data=params)
+        response = await self._post(end_point, data=params)
         return types.SendSms(**response)
 
     @overload
-    def create_bridge_call(
+    async def create_bridge_call(
         self,
         bridge_phones: str,
         phones: str,
@@ -997,7 +997,7 @@ class Yemot:
         ...
 
     @overload
-    def create_bridge_call(
+    async def create_bridge_call(
         self,
         bridge_phones: str,
         phones: str,
@@ -1012,7 +1012,7 @@ class Yemot:
     ) -> types.CreateBridgeCall:
         ...
 
-    def create_bridge_call(
+    async def create_bridge_call(
         self,
         bridge_phones: str,
         phones: str,
@@ -1044,38 +1044,38 @@ class Yemot:
 
         }
         params = self._filter_params(bool_to_int_params, other_params)
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return types.CreateBridgeCall(**response)
 
-    def get_queue_real_time(self, queue_path: str) -> types.GetQueueRealTime:
+    async def get_queue_real_time(self, queue_path: str) -> types.GetQueueRealTime:
         """https://f2.freeivr.co.il/post/72362 ."""
         end_point = "GetQueueRealTime"
         params = {
             "queuePath": queue_path
         }
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return types.GetQueueRealTime(**response)
 
-    def get_customer_data(self) -> types.GetCustomerData:
+    async def get_customer_data(self) -> types.GetCustomerData:
         """https://f2.freeivr.co.il/post/74300 ."""
         end_point = "GetCustomerData"
-        response = self._get(end_point)
+        response = await self._get(end_point)
         return types.GetCustomerData(**response)
 
-    def view_campaign_reports(self, campaign_id: str, json: bool | None = None) -> types.ViewCampaignReports:
+    async def view_campaign_reports(self, campaign_id: str, json: bool | None = None) -> types.ViewCampaignReports:
         """https://f2.freeivr.co.il/post/75408 ."""
         end_point = "ViewCampaignReports"
         params = self._filter_params(other_params={"CampaignId": campaign_id}, bool_to_int_params={"json": json})
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         raise NotImplementedError
         return types.ViewCampaignReports(**response)
 
     @overload
-    def validation_callerId(self, action: Literal[input_types.ValidationCallerIdAction.SEND], *, caller_id: str, valid_type: input_types.ValidationCallerIdValidType) -> str: ...
+    async def validation_callerId(self, action: Literal[input_types.ValidationCallerIdAction.SEND], *, caller_id: str, valid_type: input_types.ValidationCallerIdValidType) -> str: ...
     @overload
-    def validation_callerId(self, action: Literal[input_types.ValidationCallerIdAction.VALID], *, re_id: str, code: str) -> bool: ...
+    async def validation_callerId(self, action: Literal[input_types.ValidationCallerIdAction.VALID], *, re_id: str, code: str) -> bool: ...
 
-    def validation_callerId(
+    async def validation_callerId(
         self,
         action: input_types.ValidationCallerIdAction,
         *,
@@ -1094,36 +1094,36 @@ class Yemot:
             "code": code
         }
         params = self._filter_params(other_params=other_params)
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         if action == input_types.ValidationCallerIdAction.SEND:
             return response["reqId"]
         if action == input_types.ValidationCallerIdAction.VALID:
             return response["responseStatus"] == "OK"
         raise ValueError
 
-    def get_tasks(self, limit: int | None = None) -> types.GetTasks:
+    async def get_tasks(self, limit: int | None = None) -> types.GetTasks:
         """https://f2.freeivr.co.il/post/78443 ."""
         end_point = "GetTasks"
         params = {"limit": limit} if limit is not None else {}
-        response = self._get(end_point, params=params)
+        response = await self._get(end_point, params=params)
         return types.GetTasks(**response)
 
-    def get_tasks_data(self, task_id: int) -> types.GetTasksData:
+    async def get_tasks_data(self, task_id: int) -> types.GetTasksData:
         """https://f2.freeivr.co.il/post/78443 ."""
         end_point = "GetTasksData"
         params = {"TaskId": task_id}
-        response = self._get(end_point, params=params)
+        response = await self._get(end_point, params=params)
         return types.GetTasksData(**response)
 
-    def get_tasks_logs(self, task_id: int) -> types.GetTasksLogs:
+    async def get_tasks_logs(self, task_id: int) -> types.GetTasksLogs:
         """https://f2.freeivr.co.il/post/78443 ."""
         end_point = "GetTasksLogs"
         params = {"TaskId": task_id}
-        response = self._get(end_point, params=params)
+        response = await self._get(end_point, params=params)
         return types.GetTasksLogs(**response)
 
     @overload
-    def create_task(
+    async def create_task(
         self,
         task_type: Literal[input_types.CreateTaskType.SEND_SMS],
         active: bool,
@@ -1146,7 +1146,7 @@ class Yemot:
         ...
 
     @overload
-    def create_task(
+    async def create_task(
         self,
         task_type: Literal[input_types.CreateTaskType.RUN_TZINTUK],
         active: bool,
@@ -1169,7 +1169,7 @@ class Yemot:
         ...
 
     @overload
-    def create_task(
+    async def create_task(
         self,
         task_type: Literal[input_types.CreateTaskType.MOVE_ON_FILE],
         active: bool,
@@ -1193,7 +1193,7 @@ class Yemot:
     ) -> types.CreateTask:
         ...
 
-    def create_task(
+    async def create_task(
         self,
         task_type: input_types.CreateTaskType,
         active: bool | None = None,
@@ -1254,10 +1254,10 @@ class Yemot:
             other_params["moveFileType"] = move_file_type
             other_params["blockMoveIfNewFileInMinutes"] = block_move_if_new_file_in_minutes
         params = self._filter_params(bool_to_int_params, other_params)
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return types.CreateTask(**response)
 
-    def update_task(
+    async def update_task(
         self,
         task_id: int,
         active: bool | None = None,
@@ -1294,19 +1294,19 @@ class Yemot:
             "ifAnyDay": if_any_day
         }
         params = self._filter_params(bool_to_int_params, other_params)
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return response["responseStatus"] == "OK"
 
-    def delete_task(self, task_id: int) -> bool:
+    async def delete_task(self, task_id: int) -> bool:
         """https://f2.freeivr.co.il/post/78443 ."""
         end_point = "DeleteTask"
         params = {
             "TaskId": task_id
         }
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return response["responseStatus"] == "OK"
 
-    def send_tts(
+    async def send_tts(
             self,
             phones: list[str] | str,
             tts_message: str,
@@ -1332,11 +1332,11 @@ class Yemot:
             "SendMail": send_mail
         }
         params = self._filter_params(bool_to_int_params, other_params)
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return types.SendTTS(**response)
 
     @overload
-    def render_ymgr_file(
+    async def render_ymgr_file(
         self,
         path: str,
         convert_type: Literal["json"],
@@ -1348,7 +1348,7 @@ class Yemot:
         ...
 
     @overload
-    def render_ymgr_file(
+    async def render_ymgr_file(
         self,
         path: str,
         convert_type: Literal["csv", "html"],
@@ -1359,7 +1359,7 @@ class Yemot:
     ) -> str:
         ...
 
-    def render_ymgr_file(
+    async def render_ymgr_file(
         self,
         path: str,
         convert_type: Literal["json", "csv", "html"],
@@ -1380,91 +1380,91 @@ class Yemot:
         }
         params = self._filter_params(bool_to_int_params, other_params)
         if convert_type == "json":
-            response = self._get(end_point, params)
+            response = await self._get(end_point, params)
             return response["data"]
         params.update(self.params)
         client = self._get_session()
-        response = client.get(f"{self.BASE_URL}{end_point}", params=params)
+        response = await client.get(f"{self.BASE_URL}{end_point}", params=params)
         content_type = response.headers.get("Content-Type")
         if content_type == "application/json; charset=utf-8":
             json_error = response.json()
             self._check_response(json_error)
         return response.text
 
-    def get_customer_sms_transactions(self) -> types.GetCustomerSmsTransactions:
+    async def get_customer_sms_transactions(self) -> types.GetCustomerSmsTransactions:
         """https://f2.freeivr.co.il/post/86565 ."""
         end_point = "GetCustomerSmsTransactions"
-        response = self._get(end_point)
+        response = await self._get(end_point)
         return types.GetCustomerSmsTransactions(**response)
 
-    def check_if_folder_exists(self, path: str | int, base_path: str = "ivr2:/") -> bool:
+    async def check_if_folder_exists(self, path: str | int, base_path: str = "ivr2:/") -> bool:
         """https://f2.freeivr.co.il/post/89322 ."""
         end_point = "CheckIfFolderExists"
         params = {
             "path": f"{base_path}{path}"
         }
         client = self._get_session()
-        response = client.get(f"{self.BASE_URL}{end_point}", params={**self.params, **params}).json()
+        response = (await client.get(f"{self.BASE_URL}{end_point}", params={**self.params, **params})).json()
         if "folderExists" in response:
             return response["folderExists"]
         raise YemotAPIError(response["responseStatus"], **response)
 
-    def create_sip_account(self, ext_number: int | None = None) -> types.CreateSipAccount:
+    async def create_sip_account(self, ext_number: int | None = None) -> types.CreateSipAccount:
         """https://f2.freeivr.co.il/post/91611 ."""
         end_point = "CreateSipAccount"
         other_params = {
             "extNumber": ext_number
         }
         params = self._filter_params(other_params=other_params)
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return types.CreateSipAccount(**response)
 
-    def get_sip_accounts_in_customer(self) -> types.GetSipAccountsInCustomer:
+    async def get_sip_accounts_in_customer(self) -> types.GetSipAccountsInCustomer:
         """https://f2.freeivr.co.il/post/91611 ."""
         end_point = "GetSipAccountsInCustomer"
-        response = self._get(end_point)
+        response = await self._get(end_point)
         return types.GetSipAccountsInCustomer(**response)
 
-    def sip_to_wss(self, account_number: int | None = None) -> bool:
+    async def sip_to_wss(self, account_number: int | None = None) -> bool:
         """https://f2.freeivr.co.il/post/91611 ."""
         end_point = "SipToWSS"
         other_params = {
             "accountNumber": account_number
         }
         params = self._filter_params(other_params=other_params)
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return response["responseStatus"] == "OK"
 
-    def sip_to_udp(self, account_number: int | None = None) -> bool:
+    async def sip_to_udp(self, account_number: int | None = None) -> bool:
         """https://f2.freeivr.co.il/post/91611 ."""
         end_point = "SipToUDP"
         other_params = {
             "accountNumber": account_number
         }
         params = self._filter_params(other_params=other_params)
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return response["responseStatus"] == "OK"
 
-    def edit_caller_id_in_sip_account(self, account_number: int, caller_id: str) -> bool:
+    async def edit_caller_id_in_sip_account(self, account_number: int, caller_id: str) -> bool:
         """https://f2.freeivr.co.il/post/91611 ."""
         end_point = "EditCallerIdInSipAccount"
         params = {
             "accountNumber": account_number,
             "callerId": caller_id
         }
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return response["responseStatus"] == "OK"
 
-    def delete_sip_account(self, account_number: int | list[int]) -> bool:
+    async def delete_sip_account(self, account_number: int | list[int]) -> bool:
         """https://f2.freeivr.co.il/post/91611 ."""
         end_point = "DeleteSipAccount"
         params = {
             "accountNumber": account_number
         }
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return response["responseStatus"] == "OK"
 
-    def sip_extension_management(
+    async def sip_extension_management(
         self,
         sip_extension_management: input_types.SipExtensionManagementAction,
         account_number: int | None = None,
@@ -1480,30 +1480,30 @@ class Yemot:
         }
         params = self._filter_params(other_params=other_params)
         print(params)
-        response = self._post(end_point, params)  # eroor message='bad action', response_status='Exception'
+        response = await self._post(end_point, params)  # eroor message='bad action', response_status='Exception'
         return response["extNumber"]
 
-    def set_secondary_did_usage_description(self, secondary_did_id: int, new_usage: str) -> bool:
+    async def set_secondary_did_usage_description(self, secondary_did_id: int, new_usage: str) -> bool:
         """https://f2.freeivr.co.il/post/91702 ."""
         end_point = "SetSecondaryDIDUsageDescription"
         params = {
             "secondaryDidId": secondary_did_id,
             "newUsage": new_usage
         }
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return response["status"]
 
-    def get_ivr2_dir_stats(self, path: str) -> types.GetIVR2DirStats:
+    async def get_ivr2_dir_stats(self, path: str) -> types.GetIVR2DirStats:
         """https://f2.freeivr.co.il/post/92233 ."""
         end_point = "GetIVR2DirStats"
         params = {
             "path": f"{path}"
         }
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return types.GetIVR2DirStats(**response)
 
     @overload
-    def queue_management(
+    async def queue_management(
         self,
         queue_path: str,
         action: Literal[input_types.QueueManagementAction.KICK],
@@ -1514,7 +1514,7 @@ class Yemot:
         ...
 
     @overload
-    def queue_management(
+    async def queue_management(
         self,
         queue_path: str,
         action: Literal[input_types.QueueManagementAction.PAUSE, input_types.QueueManagementAction.UNPAUSE],
@@ -1523,7 +1523,7 @@ class Yemot:
     ) -> bool:
         ...
 
-    def queue_management(
+    async def queue_management(
         self,
         queue_path: str,
         action: input_types.QueueManagementAction,
@@ -1543,35 +1543,35 @@ class Yemot:
         if action == input_types.QueueManagementAction.KICK and go_to is not None:
             other_params["moreData"] = f"GOTO:{go_to}"
         params = self._filter_params(other_params=other_params)
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         if action == input_types.QueueManagementAction.KICK:
             return response["status"]
         return response["responseStatus"] == "OK"
 
-    def pirsum_phone_management(self, action: input_types.PirsumPhoneManagementAction) -> bool:
+    async def pirsum_phone_management(self, action: input_types.PirsumPhoneManagementAction) -> bool:
         """https://f2.freeivr.co.il/post/106325 ."""
         end_point = "PirsumPhoneManagement"
         params = {
             "action": action
         }
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         if action == input_types.PirsumPhoneManagementAction.GET_REGISTRATION_STATUS:
             return response["registrationStatus"]
         return response["results"] == "OK"
 
     @overload
-    def call_extension_bridging(self, method: Literal[input_types.RunTzintukMethod.OTHER], phones: list[str] | input_types.RunTzintukInput1 | input_types.RunTzintukInput2, ivr_path: str, caller_id: str | None = None, calls_time_out: int | None = None, base_path: str = "ivr2:/") -> types.CallExtensionBridging:
+    async def call_extension_bridging(self, method: Literal[input_types.RunTzintukMethod.OTHER], phones: list[str] | input_types.RunTzintukInput1 | input_types.RunTzintukInput2, ivr_path: str, caller_id: str | None = None, calls_time_out: int | None = None, base_path: str = "ivr2:/") -> types.CallExtensionBridging:
         ...
 
     @overload
-    def call_extension_bridging(self, method: Literal[input_types.RunTzintukMethod.TPL], phones: int, ivr_path: str, caller_id: str | None = None, calls_time_out: int | None = None, base_path: str = "ivr2:/") -> types.CallExtensionBridging:
+    async def call_extension_bridging(self, method: Literal[input_types.RunTzintukMethod.TPL], phones: int, ivr_path: str, caller_id: str | None = None, calls_time_out: int | None = None, base_path: str = "ivr2:/") -> types.CallExtensionBridging:
         ...
 
     @overload
-    def call_extension_bridging(self, method: Literal[input_types.RunTzintukMethod.TZL], phones: list[str], ivr_path: str, caller_id: str | None = None, calls_time_out: int | None = None, base_path: str = "ivr2:/") -> types.CallExtensionBridging:
+    async def call_extension_bridging(self, method: Literal[input_types.RunTzintukMethod.TZL], phones: list[str], ivr_path: str, caller_id: str | None = None, calls_time_out: int | None = None, base_path: str = "ivr2:/") -> types.CallExtensionBridging:
         ...
 
-    def call_extension_bridging(
+    async def call_extension_bridging(
         self,
         method: input_types.RunTzintukMethod,
         phones: list[str] | int | input_types.RunTzintukInput1 | input_types.RunTzintukInput2,
@@ -1595,29 +1595,29 @@ class Yemot:
         elif method == input_types.RunTzintukMethod.TZL:
             phones_param = {"phones": "tzl:", "tzintukLists": phones}
         params.update(phones_param)
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         return types.CallExtensionBridging(**response)
 
-    def sip_get_contexts(self, account_number: int | None = None) -> types.SipGetContexts:
+    async def sip_get_contexts(self, account_number: int | None = None) -> types.SipGetContexts:
         """https://f2.freeivr.co.il/post/125413 ."""
         end_point = "SipGetContexts"
         params = self._filter_params(other_params={"accountNumber": account_number})
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return types.SipGetContexts(**response)
 
-    def get_sip_accounts_registered_status(self) -> types.GetSipAccountsRegisteredStatus:
+    async def get_sip_accounts_registered_status(self) -> types.GetSipAccountsRegisteredStatus:
         """https://f2.freeivr.co.il/post/125630 ."""
         end_point = "GetSipAccountsRegisteredStatus"
-        response = self._get(end_point)
+        response = await self._get(end_point)
         return types.GetSipAccountsRegisteredStatus(**response)
 
-    def get_approved_caller_ids(self) -> types.GetApprovedCallerIDs:
+    async def get_approved_caller_ids(self) -> types.GetApprovedCallerIDs:
         """https://f2.freeivr.co.il/post/135629 ."""
         end_point = "GetApprovedCallerIDs"
-        response = self._get(end_point)
+        response = await self._get(end_point)
         return types.GetApprovedCallerIDs(**response)
 
-    def is_caller_id_approved(self, caller_id: str, service_type: Literal["sms", "call"] | None = None) -> types.IsCallerIDApproved:
+    async def is_caller_id_approved(self, caller_id: str, service_type: Literal["sms", "call"] | None = None) -> types.IsCallerIDApproved:
         """https://f2.freeivr.co.il/post/135691 ."""
         end_point = "IsCallerIDApproved"
         other_params = {
@@ -1625,22 +1625,22 @@ class Yemot:
             "serviceType": service_type
         }
         params = self._filter_params(other_params=other_params)
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return types.IsCallerIDApproved(**response)
 
     @overload
-    def queue_call_back(self, action: Literal[input_types.QueueCallBackAction.GET_QUEUES]) -> types.QueueCallBackGetQueues:
+    async def queue_call_back(self, action: Literal[input_types.QueueCallBackAction.GET_QUEUES]) -> types.QueueCallBackGetQueues:
         ...
 
     @overload
-    def queue_call_back(self, action: Literal[input_types.QueueCallBackAction.GET_LIST], id: int) -> types.QueueCallBackGetList:
+    async def queue_call_back(self, action: Literal[input_types.QueueCallBackAction.GET_LIST], id: int) -> types.QueueCallBackGetList:
         ...
 
     @overload
-    def queue_call_back(self, action: Literal[input_types.QueueCallBackAction.REMOVE_NUMBER], id: int) -> bool:
+    async def queue_call_back(self, action: Literal[input_types.QueueCallBackAction.REMOVE_NUMBER], id: int) -> bool:
         ...
 
-    def queue_call_back(self, action: input_types.QueueCallBackAction, id: int | None = None) -> types.QueueCallBackGetQueues | types.QueueCallBackGetList | bool:
+    async def queue_call_back(self, action: input_types.QueueCallBackAction, id: int | None = None) -> types.QueueCallBackGetQueues | types.QueueCallBackGetList | bool:
         """https://f2.freeivr.co.il/post/144279 ."""
         end_point = "QueueCallBack"
         other_params = {
@@ -1648,14 +1648,14 @@ class Yemot:
             "id": id
         }
         params = self._filter_params(other_params=other_params)
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         if action == input_types.QueueCallBackAction.GET_QUEUES:
             return types.QueueCallBackGetQueues(**response)
         if action == input_types.QueueCallBackAction.GET_LIST:
             return types.QueueCallBackGetList(**response)
         return response["responseStatus"] == "OK"
 
-    def get_incoming_sms(self, limit: int | None = None, start_date: datetime | str | None = None, end_date: datetime | str | None = None) -> types.GetIncomingSms:
+    async def get_incoming_sms(self, limit: int | None = None, start_date: datetime | str | None = None, end_date: datetime | str | None = None) -> types.GetIncomingSms:
         """https://f2.freeivr.co.il/post/145861 ."""
         end_point = "GetIncomingSms"
         other_params = {
@@ -1664,33 +1664,33 @@ class Yemot:
             "endDate": self._format_datetime(end_date)
         }
         params = self._filter_params(other_params=other_params)
-        response = self._get(end_point, params)
+        response = await self._get(end_point, params)
         return types.GetIncomingSms(**response)
 
     @overload
-    def mfa_session(self, action: Literal[input_types.MfaSessionAction.IS_PASS, input_types.MfaSessionAction.TRY]) -> types.MfaSessionIsPass: ...
+    async def mfa_session(self, action: Literal[input_types.MfaSessionAction.IS_PASS, input_types.MfaSessionAction.TRY]) -> types.MfaSessionIsPass: ...
     @overload
-    def mfa_session(self, action: Literal[input_types.MfaSessionAction.GET_MFA_METHODS]) -> types.MfaSessionGetMfaMethods: ...
+    async def mfa_session(self, action: Literal[input_types.MfaSessionAction.GET_MFA_METHODS]) -> types.MfaSessionGetMfaMethods: ...
     @overload
-    def mfa_session(self, action: Literal[input_types.MfaSessionAction.SEND_MFA, input_types.MfaSessionAction.REVALIDATE_METHOD], *, mfa_id: int, mfa_send_type: str, lang: str | None = None, auto_otp_hostname: str | None = None) -> bool: ...
+    async def mfa_session(self, action: Literal[input_types.MfaSessionAction.SEND_MFA, input_types.MfaSessionAction.REVALIDATE_METHOD], *, mfa_id: int, mfa_send_type: str, lang: str | None = None, auto_otp_hostname: str | None = None) -> bool: ...
     @overload
-    def mfa_session(self, action: Literal[input_types.MfaSessionAction.VALID_MFA], *, mfa_code: str, mfa_remember_me: bool | None = None, mfa_remember_note: str | None = None) -> types.MfaSessionValidMfa: ...
+    async def mfa_session(self, action: Literal[input_types.MfaSessionAction.VALID_MFA], *, mfa_code: str, mfa_remember_me: bool | None = None, mfa_remember_note: str | None = None) -> types.MfaSessionValidMfa: ...
     @overload
-    def mfa_session(self, action: Literal[input_types.MfaSessionAction.ADD_METHOD], *, mfa_new_type: Literal["EMAIL", "PHONE"], mta_new_value: str, mfa_new_valid_note: str | None = None, new_expired_date: datetime | str | None = None) -> str: ...
+    async def mfa_session(self, action: Literal[input_types.MfaSessionAction.ADD_METHOD], *, mfa_new_type: Literal["EMAIL", "PHONE"], mta_new_value: str, mfa_new_valid_note: str | None = None, new_expired_date: datetime | str | None = None) -> str: ...
     @overload
-    def mfa_session(self, action: Literal[input_types.MfaSessionAction.VALID_METHOD], *, mfa_id: int, mfa_code: str) -> types.MfaSessionValidMfa: ...
+    async def mfa_session(self, action: Literal[input_types.MfaSessionAction.VALID_METHOD], *, mfa_id: int, mfa_code: str) -> types.MfaSessionValidMfa: ...
     @overload
-    def mfa_session(self, action: Literal[input_types.MfaSessionAction.DELETE_METHOD], *, mfa_id: int) -> bool: ...
+    async def mfa_session(self, action: Literal[input_types.MfaSessionAction.DELETE_METHOD], *, mfa_id: int) -> bool: ...
     @overload
-    def mfa_session(self, action: Literal[input_types.MfaSessionAction.GET_MFA_TRUST_TOKENS]) -> types.MfaSessionGetMfaTrustTokens: ...
+    async def mfa_session(self, action: Literal[input_types.MfaSessionAction.GET_MFA_TRUST_TOKENS]) -> types.MfaSessionGetMfaTrustTokens: ...
     @overload
-    def mfa_session(self, action: Literal[input_types.MfaSessionAction.DELETE_TRUST_TOKEN], *, trust_token_id: str) -> bool: ...
+    async def mfa_session(self, action: Literal[input_types.MfaSessionAction.DELETE_TRUST_TOKEN], *, trust_token_id: str) -> bool: ...
     @overload
-    def mfa_session(self, action: Literal[input_types.MfaSessionAction.GET_MFA_TRUST_IPS]) -> list[str]: ...
+    async def mfa_session(self, action: Literal[input_types.MfaSessionAction.GET_MFA_TRUST_IPS]) -> list[str]: ...
     @overload
-    def mfa_session(self, action: Literal[input_types.MfaSessionAction.SET_MFA_TRUST_IPS], *, trust_ips: list[str]) -> types.MfaSessionSetMfaTrustIps: ...
+    async def mfa_session(self, action: Literal[input_types.MfaSessionAction.SET_MFA_TRUST_IPS], *, trust_ips: list[str]) -> types.MfaSessionSetMfaTrustIps: ...
 
-    def mfa_session(
+    async def mfa_session(
         self,
         action: input_types.MfaSessionAction,
         *,
@@ -1727,7 +1727,7 @@ class Yemot:
             "trustIps": trust_ips
         }
         params = self._filter_params(other_params=other_params)
-        response = self._post(end_point, params)
+        response = await self._post(end_point, params)
         if action in [input_types.MfaSessionAction.IS_PASS, input_types.MfaSessionAction.TRY, input_types.MfaSessionAction.GET_MFA_METHODS]:
             return types.MfaSessionIsPass(**response)
         if action in [input_types.MfaSessionAction.SEND_MFA, input_types.MfaSessionAction.REVALIDATE_METHOD, input_types.MfaSessionAction.DELETE_METHOD, input_types.MfaSessionAction.DELETE_TRUST_TOKEN]:
