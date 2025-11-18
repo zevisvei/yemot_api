@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import date, datetime
 from types import TracebackType
 from typing import Any, Literal, Self, overload
@@ -12,6 +13,8 @@ from .exceptions import YemotAPIError
 __all__ = [
     "AsyncYemot"
 ]
+
+logger = logging.getLogger(__name__)
 
 
 class AsyncYemot:
@@ -74,6 +77,10 @@ class AsyncYemot:
     async def __aexit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None) -> None:
         if self._session:
             await self._session.aclose()
+
+    def __del__(self) -> None:
+        if self._session:
+            logger.warning("AsyncYemot session was not closed. Please use 'async with' or call 'await close()' to close the session properly.")
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, self.__class__):

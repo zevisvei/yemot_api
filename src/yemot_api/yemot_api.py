@@ -75,6 +75,10 @@ class Yemot:
         if self._session:
             self._session.close()
 
+    def __del__(self) -> None:
+        if self._session:
+            self._session.close()
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, self.__class__):
             return NotImplemented

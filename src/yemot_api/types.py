@@ -109,8 +109,8 @@ class TemplateEntry(BaseModel):
     index: int
     phone: str
     blocked: bool
-    name: str
-    more_info: str = Field(alias="moreinfo")
+    name: str | None
+    more_info: str | None = Field(alias="moreinfo")
 
 
 class UploadPhoneList(BaseModel):
