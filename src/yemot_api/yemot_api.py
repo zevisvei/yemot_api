@@ -7,6 +7,7 @@ from uuid import uuid4
 import requests
 
 from . import input_types, types
+from ._yemot_api_base import YemotBase
 from .exceptions import YemotAPIError
 
 __all__ = [
@@ -14,7 +15,7 @@ __all__ = [
 ]
 
 
-class Yemot:
+class Yemot(YemotBase):
     BASE_URL = "https://www.call2all.co.il/ym/api/"
 
     def __init__(
@@ -78,61 +79,6 @@ class Yemot:
     def __del__(self) -> None:
         if self._session:
             self._session.close()
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-        return self.token == other.token
-
-    def __str__(self) -> str:
-        return f"{self.token}"
-
-    def __repr__(self) -> str:
-        return f"{self.token}"
-
-    def __hash__(self) -> int:
-        return hash(self.token)
-
-    @property
-    def params(self) -> dict[str, str]:
-        return {"token": self.token}
-
-    @staticmethod
-    def _check_response(json_response: dict) -> None:
-        if json_response["responseStatus"] != "OK":
-            raise YemotAPIError(
-                json_response["responseStatus"],
-                json_response.get("messageCode"),
-                json_response.get("message"),
-                **json_response
-            )
-
-    @staticmethod
-    def _filter_params(bool_to_int_params: dict | None = None, other_params: dict | None = None) -> dict:
-        params = {}
-        if bool_to_int_params:
-            params.update({key: int(val) for key, val in bool_to_int_params.items() if val is not None})
-        if other_params:
-            params.update({k: v for k, v in other_params.items() if v is not None})
-        return params
-
-    @staticmethod
-    def _to_iso_date(d: str | date | None) -> str | None:
-        if isinstance(d, datetime):
-            return d.date().isoformat()
-        if isinstance(d, date):
-            return d.isoformat()
-        if isinstance(d, str) and d.strip():
-            return d
-        return None
-
-    @staticmethod
-    def _format_datetime(dt: datetime | str | None) -> str | None:
-        if isinstance(dt, str) and dt.strip():
-            return dt
-        if isinstance(dt, datetime):
-            return dt.strftime("%Y-%m-%d %H:%M:%S")
-        return None
 
     def login(self, user_name: str, password: str) -> str:
         """https://f2.freeivr.co.il/post/24253 ."""
