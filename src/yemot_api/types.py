@@ -57,7 +57,7 @@ class Call(BaseModel):
     duration: int
     transfer_from: Literal["מועבר"] | None = Field(alias="transferFrom")
     id: str
-    path: str
+    path: str | None
 
 
 class UploadFile(BaseModel):
@@ -125,8 +125,8 @@ class UploadPhoneList(BaseModel):
 
 class RejectedRecord(BaseModel):
     phone: str
-    name: str
-    more_info: str = Field(alias="moreinfo")
+    name: str | None
+    more_info: str | None = Field(alias="moreinfo")
     blocked: bool
     error_state: Literal["DUPLICATE", "INVALID"] = Field(alias="errorState")
     original_row_number: int = Field(alias="originalRowNumber")

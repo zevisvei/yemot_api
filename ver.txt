@@ -1,0 +1,1 @@
+vermin -vvv --eval-annotations --backport enum --backport typing "C:\Users\User\Desktop\yemot_api"
