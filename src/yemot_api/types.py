@@ -72,6 +72,10 @@ class GetTemplates(BaseModel):
     templates: list[Template]
 
 
+class GetTemplate(BaseModel):
+    template: Template
+
+
 class Template(BaseModel):
     template_id: int = Field(alias="templateId")
     description: str | None

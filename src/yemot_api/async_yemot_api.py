@@ -332,7 +332,7 @@ class AsyncYemot(YemotBase):
         bridge_to: str | None = None,
         play_private_msg: bool | None = None,
         remove_request: Literal["SILENT", "WITH_MESSAGE"] | None = None
-    ) -> types.GetTemplates:
+    ) -> types.GetTemplate:
         """https://f2.freeivr.co.il/post/32034 ."""
         end_point = "UpdateTemplate"
         bool_to_int = {
@@ -358,7 +358,7 @@ class AsyncYemot(YemotBase):
         }
         params = self._filter_params(bool_to_int, other_params)
         response = await self._post(end_point, params)
-        return types.GetTemplates(**response)
+        return types.GetTemplate(**response)
 
     async def create_template(self, description: str) -> int:
         """https://f2.freeivr.co.il/post/32037 ."""
