@@ -23,10 +23,14 @@ class AsyncYemot(YemotBase):
 
     def __init__(
             self,
-            token: str
+            token: str,
+            timeout: httpx.Timeout | None = None
     ) -> None:
         self.token = token
         self._session: httpx.AsyncClient | None = None
+        if timeout is None:
+            timeout = httpx.Timeout(10.0, read=300.0)
+        self._timeout = timeout
 
     async def close(self) -> None:
         if self._session:
@@ -35,7 +39,7 @@ class AsyncYemot(YemotBase):
 
     def _get_session(self) -> httpx.AsyncClient:
         if self._session is None:
-            self._session = httpx.AsyncClient()
+            self._session = httpx.AsyncClient(timeout=self._timeout)
         return self._session
 
     async def _get(self, end_point: str, params: dict[str, Any] | None = None, *, default_params: bool = True) -> dict[Any, Any]:
@@ -78,6 +82,7 @@ class AsyncYemot(YemotBase):
     async def __aexit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None) -> None:
         if self._session:
             await self._session.aclose()
+        self._session = None
 
     def __del__(self) -> None:
         if self._session:
