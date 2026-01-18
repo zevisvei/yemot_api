@@ -311,7 +311,7 @@ class GetFile(BaseModel):
 
 class FileActionEntry(BaseModel):
     what: str
-    target: str
+    target: str | None
     success: bool
 
 
