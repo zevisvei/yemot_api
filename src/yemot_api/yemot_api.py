@@ -454,6 +454,8 @@ class Yemot(YemotBase):
         }
         payload = self._filter_params(bool_to_int_params, other_params)
         response = self._post(end_point=end_point, data=payload)
+        if response["message"] == "bad_format":
+            raise YemotAPIError("Bad format", None, "The provided data has a bad format. Please check the data and try again.")
         return types.UploadPhoneList(**response)
 
     def run_campaign(

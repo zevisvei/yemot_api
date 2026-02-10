@@ -81,7 +81,6 @@ class RoutingModel(BaseModel):
 
 
 def _parse_dd_mm_yyyy(v: str) -> datetime_date:
-    print(f"Parsing date: {v} ({type(v)})")
     if isinstance(v, str):
         return datetime.strptime(v, "%d/%m/%Y").date()
     return v
