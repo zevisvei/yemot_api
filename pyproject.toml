@@ -1,6 +1,6 @@
 [project]
 name = "yemot-api"
-version = "0.1.16"
+version = "0.1.17"
 license = { text = "GPL-3.0-or-later" }
 classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
