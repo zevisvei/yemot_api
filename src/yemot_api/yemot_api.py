@@ -1695,3 +1695,32 @@ class Yemot(YemotBase):
         if action == input_types.MfaSessionAction.SET_MFA_TRUST_IPS:
             return types.MfaSessionSetMfaTrustIps(**response)
         raise ValueError
+
+    def create_music_on_holds(self, name: str, folder_path: str, base_path: str = "ivr2:/") -> str:
+        """https://f2.freeivr.co.il/post/176539 ."""
+        end_point = "CreateMusicOnHolds"
+        params = {
+            "name": name,
+            "folderPath": f"{base_path}{folder_path}"
+        }
+        response = self._post(end_point, params)
+        return response["status"]
+
+    def delete_music_on_holds(self, file_name: str) -> bool:
+        """https://f2.freeivr.co.il/post/176539 ."""
+        end_point = "DeleteMusicOnHolds"
+        params = {
+            "name": file_name
+        }
+        response = self._post(end_point, params)
+        return response["responseStatus"] == "OK"
+
+    def get_music_on_holds(self, folder_path: str, base_path: str = "ivr2:/") -> str | None:
+        """https://f2.freeivr.co.il/post/176539 ."""
+        end_point = "GetMusicOnHoldByPath"
+        params = {
+            "path": f"{base_path}{folder_path}"
+        }
+        response = self._post(end_point, params)
+        data = response.get("data")
+        return data if data else None
