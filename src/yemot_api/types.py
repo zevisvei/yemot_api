@@ -865,3 +865,45 @@ class MfaSessionSetMfaTrustIps(BaseModel):
     save: bool
     valid_new_list: list[str]
     errors: list[str]
+
+
+class CallsStatus(BaseModel):
+    main_did: str = Field(alias="mainDid")
+    calls_count: int = Field(alias="callsCount")
+    calls: list[CallStatusEntry]
+
+
+class CallStatusEntry(BaseModel):
+    call_id: str = Field(alias="callId")
+    call_data: CallStatusEntryData = Field(alias="callData")
+    call_time: int = Field(alias="callTime")
+    update_stamp: int = Field(alias="updateStamp")
+
+
+class CallStatusEntryData(BaseModel):
+    status: str
+    caller_id_num: str = Field(alias="callerIdNum")
+    caller_id_name: str = Field(alias="callerIdname")
+    start_time: int = Field(alias="startTime")
+    start_time_date: datetime = Field(alias="startTimeDate")
+    path: str | None = None
+    path_title: str | None = Field(default=None, alias="pathTitle")
+    enter_id: str | None = Field(default=None, alias="enterID")
+    enter_id_name: str | None = Field(default=None, alias="enterIDName")
+
+    @field_validator("start_time_date", mode="before")
+    def parse_start_time_date(cls, value: str) -> datetime:  # noqa: N805
+        return datetime.strptime(value, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
+
+    @field_validator("path", "path_title", mode="before")
+    def parse_path(cls, value: str) -> str | None:  # noqa: N805
+        return value if value.strip() else None
+
+    @field_validator("enter_id", "enter_id_name", mode="before")
+    def parse_enter_id(cls, value: str | None) -> str | None:  # noqa
+        return value if value and value.strip() else None
+
+
+class CallManager(BaseModel):
+    call_ok: int = Field(alias="callOK")
+    call_id_ok: list[str] = Field(alias="callIdOK")

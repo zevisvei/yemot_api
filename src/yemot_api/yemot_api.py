@@ -1696,6 +1696,8 @@ class Yemot(YemotBase):
             return types.MfaSessionSetMfaTrustIps(**response)
         raise ValueError
 
+    # not documented
+
     def create_music_on_holds(self, name: str, folder_path: str, base_path: str = "ivr2:/") -> str:
         """https://f2.freeivr.co.il/post/176539 ."""
         end_point = "CreateMusicOnHolds"
@@ -1724,3 +1726,17 @@ class Yemot(YemotBase):
         response = self._post(end_point, params)
         data = response.get("data")
         return data if data else None
+
+    def get_calls_status(self) -> types.CallsStatus:
+        end_point = "GetCallsStatus"
+        response = self._post(end_point)
+        return types.CallsStatus(**response)
+
+    def call_manager(self, call_ids: list[str]) -> types.CallManager:
+        end_point = "CallManager"
+        params = {
+            "calls": ",".join(call_ids),
+            "action": "hangup",
+        }
+        response = self._get(end_point, params=params)
+        return types.CallManager(**response)

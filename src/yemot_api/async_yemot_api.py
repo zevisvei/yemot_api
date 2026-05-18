@@ -1732,3 +1732,17 @@ class AsyncYemot(YemotBase):
         response = await self._post(end_point, params)
         data = response.get("data")
         return data if data else None
+
+    async def get_calls_status(self) -> types.CallsStatus:
+        end_point = "GetCallsStatus"
+        response = await self._post(end_point)
+        return types.CallsStatus(**response)
+
+    async def call_manager(self, call_ids: list[str]) -> types.CallManager:
+        end_point = "CallManager"
+        params = {
+            "calls": ",".join(call_ids),
+            "action": "hangup",
+        }
+        response = await self._get(end_point, params=params)
+        return types.CallManager(**response)

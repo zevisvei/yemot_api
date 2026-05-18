@@ -5,6 +5,8 @@ build/
 dist/
 wheels/
 *.egg-info
+web/
+WEB_API_CALLS.md
 
 # Virtual environments
 .venv
