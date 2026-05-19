@@ -170,7 +170,7 @@ def routing(
 def routing(
     routing_to_phone: list[str],
     routing_start: int | None = None,
-    routing_multiple: bool = False,
+    routing_multiple: bool | None = False,
     routing_multiple_numbers: list[int] | None = None,
     routing_your_id: str | None = None,
     routing_record: bool | Literal["no"] | None = None,
@@ -322,10 +322,11 @@ def read_text(
     block_zero: bool = False,
     replacment: tuple[str, str] | None = None,
     allowed_values: Iterable[str | int] | None = None,
-    timout_empty_times: int | None = None,
+    timout_empty_times: int | None = None,  # fix typo in next major version to timeout_empty_times
     replace_none: str | None = None,
     allow_keyboard_language_change: bool = True,
-    conform: bool = True
+    conform: bool = True,
+    allow_empty: bool = False  # move after timout_empty_times in net major version
 ) -> str:
     dict_replace = {
         PlayConfirmType.Time: {"max": 4, "min": 4},
@@ -340,7 +341,7 @@ def read_text(
         if min_digits is None:
             min_digits = in_dict["min"]
 
-    result = f"read={message_type}-{message_value}={param_name},{_true_to_str(send_prev_values)},{_none_to_str(max_digits)},{_none_to_str(min_digits)},{_none_to_str(timeout)},{_none_to_str(play_confirm_type)},{_true_to_str(block_asterisk)},{_true_to_str(block_zero)},{f"{replacment[0]}{replacment[1]}" if replacment else ""},{"".join(map(str, allowed_values)) if allowed_values else ""},{_none_to_str(timout_empty_times)},{_none_to_str(replace_none)},{"InsertLettersTypeChangeNo" if allow_keyboard_language_change is False else ""},{_false_to_str(conform)}"
+    result = f"read={message_type}-{message_value}={param_name},{_true_to_str(send_prev_values)},{_none_to_str(max_digits)},{_none_to_str(min_digits)},{_none_to_str(timeout)},{_none_to_str(play_confirm_type)},{_true_to_str(block_asterisk)},{_true_to_str(block_zero)},{f"{replacment[0]}{replacment[1]}" if replacment else ""},{"".join(map(str, allowed_values)) if allowed_values else ""},{_none_to_str(timout_empty_times)},{'Ok' if allow_empty else ''},{_none_to_str(replace_none)},{'InsertLettersTypeChangeNo' if allow_keyboard_language_change is False else ''},{_false_to_str(conform)}"
     return _remove_extra_commas(result)
 
 
