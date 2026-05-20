@@ -16,7 +16,7 @@ class ApiModel(BaseModel):
     api_enter_id: str | None = Field(default=None, alias="ApiEnterID")
     api_enter_id_name: str | None = Field(default=None, alias="ApiEnterIDName")
     api_time: str | None = Field(default=None, alias="ApiTime")
-    hangup: str | None = Field(default=None, alias="Hangup")
+    hangup: str | None = Field(default=None)
     api_hangup_extension: str | None = Field(default=None, alias="ApiHangupExtension")
     referred_from: str | None = Field(default=None, alias="ReferredFrom")
 
