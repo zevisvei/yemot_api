@@ -194,7 +194,7 @@ class CampaignStatusEntry(BaseModel):
     bridged_duration: int | None = Field(alias="bridgedDuration")
     current_price: float = Field(alias="currentPrice")
     bridged: bool
-    start_time: time | None = Field(alias="startTime")
+    start_time: datetime | None = Field(alias="startTime")
     redials: list[CampaignStatusEntryRedial] | None
 
 
@@ -203,7 +203,7 @@ class CampaignStatusEntryRedial(BaseModel):
     duration: int | None
     bridged_duration: int | None = Field(alias="bridgedDuration")
     bridged: bool
-    start_time: time | None = Field(alias="startTime")
+    start_time: datetime | None = Field(alias="startTime")
 
 
 class GetActiveCampaigns(BaseModel):
