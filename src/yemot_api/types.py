@@ -189,7 +189,7 @@ class CampaignStatusEntry(BaseModel):
     phone: str
     name: str | None
     more_info: str | None = Field(alias="moreinfo")
-    entry_status: Literal["bridged", "done", "no_answer", "failed", "busy"] = Field(alias="entryStatus")
+    entry_status: str = Field(alias="entryStatus")
     duration: int | None
     bridged_duration: int | None = Field(alias="bridgedDuration")
     current_price: float = Field(alias="currentPrice")
@@ -199,7 +199,7 @@ class CampaignStatusEntry(BaseModel):
 
 
 class CampaignStatusEntryRedial(BaseModel):
-    entry_status: Literal["bridged", "done", "no_answer", "failed", "busy"] = Field(alias="entryStatus")
+    entry_status: str = Field(alias="entryStatus")
     duration: int | None
     bridged_duration: int | None = Field(alias="bridgedDuration")
     bridged: bool
