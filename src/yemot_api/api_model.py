@@ -1,10 +1,27 @@
 from datetime import date as datetime_date
 from datetime import datetime
 from datetime import time as datetime_time
-from typing import Annotated
+from typing import Annotated, Any
 
 from pydantic import BaseModel, Field
 from pydantic.functional_validators import BeforeValidator
+
+
+def _parse_dd_mm_yyyy(v: str) -> datetime_date:
+    if isinstance(v, str):
+        return datetime.strptime(v, "%d/%m/%Y").date()
+    return v
+
+
+def _empty_str_to_none(v: Any) -> Any:
+    if v == "":
+        return None
+    return v
+
+
+OptionalInt = Annotated[int | None, BeforeValidator(_empty_str_to_none)]
+OptionalStr = Annotated[str | None, BeforeValidator(_empty_str_to_none)]
+YemotDateTime = Annotated[datetime, BeforeValidator(_parse_dd_mm_yyyy)]
 
 
 class ApiModel(BaseModel):
@@ -28,9 +45,7 @@ class QueueModel(BaseModel):
     phone: str = Field(alias="Phone")
     id_type: str | None = Field(default=None, alias="IdType")
     enter_id: str | None = Field(default=None, alias="EnterId")
-    date: Annotated[
-        datetime_date, BeforeValidator(lambda v: _parse_dd_mm_yyyy(v))
-    ] = Field(alias="Date", description="Date in format dd/mm/yyyy")  # https://stackoverflow.com/questions/79788585/how-to-handle-custom-date-format-dd-mm-yyyy-in-query-params-with-inherited-mod
+    date: YemotDateTime = Field(alias="Date", description="Date in format dd/mm/yyyy")  # https://stackoverflow.com/questions/79788585/how-to-handle-custom-date-format-dd-mm-yyyy-in-query-params-with-inherited-mod
     time: datetime_time = Field(alias="Time")
     hebrew_date: str = Field(alias="HebrewDate")
     module: str = Field(alias="Module")
@@ -66,21 +81,13 @@ class RoutingModel(BaseModel):
     phone: str = Field(alias="Phone")
     id_type: str = Field(alias="IdType")
     enter_id: str = Field(alias="EnterId")
-    date: Annotated[
-        datetime_date, BeforeValidator(lambda v: _parse_dd_mm_yyyy(v))
-    ] = Field(alias="Date", description="Date in format dd/mm/yyyy")
+    date: YemotDateTime = Field(alias="Date", description="Date in format dd/mm/yyyy")
     time: datetime_time = Field(alias="Time")
     hebrew_date: str = Field(alias="HebrewDate")
     module: str = Field(alias="Module")
     routing: str = Field(alias="Routing")
     your_id: str = Field(alias="YourID")
     dial_status: str = Field(alias="DialStatus")
-    dial_time: int = Field(alias="DialTime")
-    answer_time: int = Field(alias="AnswerTime")
-    answer_number: str = Field(alias="AnswerNumber")
-
-
-def _parse_dd_mm_yyyy(v: str) -> datetime_date:
-    if isinstance(v, str):
-        return datetime.strptime(v, "%d/%m/%Y").date()
-    return v
+    dial_time: OptionalInt = Field(alias="DialTime")
+    answer_time: OptionalInt = Field(alias="AnswerTime")
+    answer_number: OptionalStr = Field(alias="AnswerNumber")
