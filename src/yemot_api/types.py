@@ -154,7 +154,7 @@ class CampaignStatus(BaseModel):
 
 class CampaignStatusCampaign(BaseModel):
     campaign_id: str = Field(alias="campaignId")
-    campaign_status: Literal["STOPPING ", "PAUSED", "RUNNING", "STOPPED", "FINISHED"] = Field(alias="campaignStatus")
+    campaign_status: str = Field(alias="campaignStatus")
     template_id: int = Field(alias="templateId")
     who: str
     caller_id: str = Field(alias="callerId")
