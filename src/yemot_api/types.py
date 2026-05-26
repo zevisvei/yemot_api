@@ -212,9 +212,9 @@ class GetActiveCampaigns(BaseModel):
 
 class CampaignAction(BaseModel):
     campaign: CampaignStatusCampaign
-    action: Literal["ADD", "BLOCK", "HANGUP", "STOP", "SET_PAUSED", "SET_MAX_ACTIVE_CHANNELS", "SET_MAX_BRIDGED_CHANNELS"]
+    action: str
     value: dict[str, str | RunCampaignPhonesDict] | str | int | None
-    data: list[CampaignActionDataEntry]
+    data: list[CampaignActionDataEntry] | None
 
 
 class RunCampaignPhonesDict(BaseModel):
