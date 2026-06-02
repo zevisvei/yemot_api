@@ -555,10 +555,10 @@ class GetCustomerData(BaseModel):
     invoice_name: str = Field(alias="invoiceName")
     invoice_address: str = Field(alias="invoiceAddress")
     fax: str
-    access_password: str = Field(alias="accessPassword")
+    access_password: str | None = Field(alias="accessPassword")
     units: float
     sms_units: float = Field(alias="smsUnits")
-    record_password: str = Field(alias="recordPassword")
+    record_password: str | None = Field(alias="recordPassword")
     reseller_credit_file: str = Field(alias="resellerCreditFile")
     system_site: str = Field(alias="systemSite")
     pirsum_phone_status: bool = Field(alias="pirsumPhoneStatus")
