@@ -35,7 +35,7 @@ class Transaction(BaseModel):
     amount: float
     description: str
     who: str  # | Literal["ADMIN", "TRANSFER", "expire"]
-    new_balance: float = Field(alias="newBalance")
+    new_balance: float | None = Field(default=None, alias="newBalance")
     expire_date: date | None = Field(alias="expireDate")
     campaign_id: str | None = Field(alias="campaignId")
 
@@ -43,7 +43,7 @@ class Transaction(BaseModel):
 class TransferUnits(BaseModel):
     destination: str
     amount: float
-    new_balance: float = Field(alias="newBalance")
+    new_balance: float | None = Field(default=None, alias="newBalance")
 
 
 class GetIncomingCalls(BaseModel):
