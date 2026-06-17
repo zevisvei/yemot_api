@@ -10,3 +10,5 @@ WEB_API_CALLS.md
 
 # Virtual environments
 .venv
+gas_yemot/
+gas/

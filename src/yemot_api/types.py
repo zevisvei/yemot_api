@@ -681,7 +681,7 @@ class SmsTransaction(BaseModel):
     transaction_time: datetime = Field(alias="transactionTime")
     amount: float
     description: str
-    new_balance: float = Field(alias="newBalance")
+    new_balance: float | None = Field(default=None, alias="newBalance")
     expire_date: datetime = Field(alias="expireDate")
     who: str
 
