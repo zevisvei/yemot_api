@@ -197,26 +197,33 @@ class AsyncYemot(YemotBase):
         auto_numbering: bool | None = None,
         tts: bool | None = None
     ) -> types.UploadFile:
-        """https://f2.freeivr.co.il/post/32031 ."""
+        """https://f2.freeivr.co.il/post/32031 .
+
+        ``path`` is the target *folder*, ``file_name`` the name to save as
+        (e.g. ``path="677"``, ``file_name="000.wav"`` -> ``ivr2:677/000.wav``).
+        """
         total_size = len(blob)
         chunk_size = 49 * 1024 * 1024
         chunks = [blob[offset:offset + chunk_size] for offset in range(0, total_size, chunk_size)]
+        # Normalise to a folder (no trailing slash) so both protocols agree on
+        # where the file lands, regardless of how ``path`` was passed.
+        folder = f"{base_path}{path}".rstrip("/")
         if len(chunks) == 1:
-            return await self._upload_small_file(path, blob, file_name, base_path, convert_audio, auto_numbering=auto_numbering, tts=tts)
-        return await self._upload_large_file(path, chunks, file_name, total_size, base_path, convert_audio=convert_audio, auto_numbering=auto_numbering, tts=tts)
+            return await self._upload_small_file(folder, blob, file_name, convert_audio, auto_numbering=auto_numbering, tts=tts)
+        return await self._upload_large_file(folder, chunks, file_name, total_size, convert_audio=convert_audio, auto_numbering=auto_numbering, tts=tts)
 
     async def _upload_small_file(
         self,
-        path: str,
+        folder: str,
         blob: bytes,
         file_name: str,
-        base_path: str,
         convert_audio: bool | None = None,
         auto_numbering: bool | None = None,
         tts: bool | None = None
     ) -> types.UploadFile:
+        # The single-shot endpoint expects the full target file path.
         data = {
-            "path": f"{base_path}{path}",
+            "path": f"{folder}/{file_name}",
         }
         if convert_audio is not None:
             data["convertAudio"] = int(convert_audio)
@@ -230,24 +237,27 @@ class AsyncYemot(YemotBase):
 
     async def _upload_large_file(
         self,
-        path: str,
+        folder: str,
         chunks: list[bytes],
         file_name: str,
         content_size: int,
-        base_path: str,
         convert_audio: bool | None = None,
         auto_numbering: bool | None = None,
         tts: bool | None = None
     ) -> types.UploadFile:
         end_point = "UploadFile"
+        # The chunked (fine-uploader) endpoint expects a *directory* in ``path``
+        # and the file name in ``qqfilename`` (matches the website).
+        dir_path = f"{folder}/"
+        qqfilename = file_name
         qquuid = str(uuid4())
         offset = 0
         for index, chunk in enumerate(chunks):
             data = {
-                "path": f"{base_path}{path}",
+                "path": dir_path,
                 "qquuid": qquuid,
                 "uploader": "yemot-admin",
-                "qqfilename": file_name,
+                "qqfilename": qqfilename,
                 "qqtotalfilesize": content_size,
                 "qqtotalparts": len(chunks),
                 "qqchunksize": len(chunk),
@@ -273,10 +283,10 @@ class AsyncYemot(YemotBase):
             offset += len(chunk)
 
         data = {
-            "path": f"{base_path}{path}",
+            "path": dir_path,
             "uploader": "yemot-admin",
             "qquuid": qquuid,
-            "qqfilename": file_name,
+            "qqfilename": qqfilename,
             "qqtotalfilesize": content_size,
             "qqtotalparts": len(chunks),
         }
@@ -289,6 +299,7 @@ class AsyncYemot(YemotBase):
         data.update(self.params)
         client = self._get_session()
         response = (await client.post(f"{self.BASE_URL}UploadFile?done", data=data)).json()
+        self._check_response(response)
         return types.UploadFile(**response)
 
     async def download_file(self, path: str, base_path: str = "ivr2:/") -> bytes:
