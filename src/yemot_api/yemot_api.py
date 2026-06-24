@@ -1379,7 +1379,7 @@ class Yemot(YemotBase):
 
     def sip_to_wss(self, account_number: int | None = None) -> bool:
         """https://f2.freeivr.co.il/post/91611 ."""
-        end_point = "SipToWSS"
+        end_point = "SipToWss"
         other_params = {
             "accountNumber": account_number
         }
@@ -1389,7 +1389,7 @@ class Yemot(YemotBase):
 
     def sip_to_udp(self, account_number: int | None = None) -> bool:
         """https://f2.freeivr.co.il/post/91611 ."""
-        end_point = "SipToUDP"
+        end_point = "SipToUdp"
         other_params = {
             "accountNumber": account_number
         }
