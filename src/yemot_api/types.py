@@ -564,6 +564,18 @@ class GetCustomerData(BaseModel):
     pirsum_phone_status: bool = Field(alias="pirsumPhoneStatus")
     ivr_type: str = Field(alias="ivrType")
 
+    @field_validator(
+        "main_did", "name", "email", "organization", "contact_name", "phones",
+        "invoice_name", "invoice_address", "fax", "reseller_credit_file",
+        "system_site", "ivr_type",
+        mode="before",
+    )
+    @classmethod
+    def _coerce_str(cls, v: object) -> object:
+        if v is None or isinstance(v, bool):
+            return ""
+        return v if isinstance(v, str) else str(v)
+
 
 class SecondaryDidEntry(BaseModel):
     id: int
