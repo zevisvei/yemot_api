@@ -470,11 +470,11 @@ class TzintukimListManagementGetLogList(BaseModel):
 class SendFax(BaseModel):
     caller_id: str = Field(alias="callerId")
     campaign_id: str = Field(alias="CampaignId")
-    delivery_url: str = Field(alias="deliveryUrl")
     file_name_send: str = Field(alias="fileNameSend")
     calls_count: int = Field(alias="callsCount")
     biling_per_call: float = Field(alias="bilingPerCall")
     biling: float
+    delivery_url: str | None = Field(default=None, alias="deliveryUrl")
 
 
 class SendSms(BaseModel):
