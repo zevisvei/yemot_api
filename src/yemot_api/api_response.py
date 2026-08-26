@@ -58,7 +58,7 @@ def go_to_folder_and_play(folder_path: str, file_path: str, play_point: int = 0)
 
 
 class CreditCard:
-    def __init__(self, billing_sum: int | None = None, credit_card_max_tashloumim: int | None = None, credit_card_currency: Literal[1, 2] | None = 1, credit_card_name_stt: bool | Literal["NameStt"] | None = None, credit_card_name_stt_record_no_ask: bool | Literal["NoAsk"] | None = None, go_back: bool | Literal["GoBack"] | None = None) -> None:
+    def __init__(self, billing_sum: int | str | None = None, credit_card_max_tashloumim: int | None = None, credit_card_currency: Literal[1, 2] | None = 1, credit_card_name_stt: bool | Literal["NameStt"] | None = None, credit_card_name_stt_record_no_ask: bool | Literal["NoAsk"] | None = None, go_back: bool | Literal["GoBack"] | None = None) -> None:
         self.billing_sum = billing_sum
         self.credit_card_max_tashloumim = credit_card_max_tashloumim
         self.credit_card_currency = credit_card_currency
@@ -95,9 +95,9 @@ class CreditCard:
         credit_card_type = "kesherhk"
         return self._response(credit_card_type, credit_card_register_number, credit_card_terminal_number=credit_card_terminal_number, credit_card_password=credit_card_password)
 
-    def nedarim_plus(self, credit_card_terminal_number: int, credit_card_enter_phone: bool | None = None) -> str:
+    def nedarim_plus(self, credit_card_terminal_number: int | str, credit_card_enter_phone: bool | None = None, response: Literal["all"] | None = None) -> str:
         credit_card_type = "nedarim_plus"
-        return self._response(credit_card_type, credit_card_terminal_number=credit_card_terminal_number, credit_card_enter_phone=credit_card_enter_phone)
+        return self._response(credit_card_type, credit_card_terminal_number=credit_card_terminal_number, credit_card_enter_phone=credit_card_enter_phone, response=response)
 
     def cardcom(self, credit_card_user_name: str, credit_card_terminal_number: int, credit_card_register_number: int = 555) -> str:
         credit_card_type = "cardcom"
