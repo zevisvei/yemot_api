@@ -2,7 +2,7 @@ import re
 from collections.abc import Iterable
 from datetime import date, datetime
 from enum import StrEnum
-from typing import Literal, overload
+from typing import Literal, NamedTuple, overload
 
 from .exceptions import YemotApiResponseError
 
@@ -206,8 +206,50 @@ class IdListMessageType(StrEnum):
     DateH = "dateH"
 
 
-def id_list_message(play: IdListMessageType, value: str) -> str:
-    result = f"id_list_message={play}-{value}"
+class Message(NamedTuple):
+    """הודעה בודדת, לשרשור כמה הודעות בפעולה אחת (מופרדות בנקודה)."""
+
+    type: IdListMessageType
+    value: str | int | date = ""
+
+    def __str__(self) -> str:
+        """מחזיר את ההודעה בפורמט של הAPI, לדוגמה ``f-000``."""
+        if self.type is IdListMessageType.Noop:
+            return "noop"
+        value = self.value
+        if isinstance(value, datetime):
+            value = value.date()
+        if isinstance(value, date):
+            value = value.strftime("%d/%m/%Y")
+        return f"{self.type}-{value}"
+
+
+MessageInput = IdListMessageType | Message | Iterable[Message | str]
+MessagesInput = Message | Iterable[Message | str]
+
+
+def _validate_param_name(param_name: str) -> None:
+    if not param_name:
+        message = "חובה להעביר param_name"
+        raise YemotApiResponseError(message)
+
+
+def _build_message(message_type: MessageInput, message_value: str | int | date = "") -> str:
+    if isinstance(message_type, Message):
+        return str(message_type)
+    if isinstance(message_type, str):  # IdListMessageType (StrEnum) - התנהגות מקורית
+        return f"{message_type}-{message_value}"
+    return ".".join(map(str, message_type))
+
+
+@overload
+def id_list_message(play: IdListMessageType, value: str) -> str: ...
+@overload
+def id_list_message(play: MessagesInput, value: Literal[""] = "") -> str: ...
+
+
+def id_list_message(play: MessageInput, value: str = "") -> str:
+    result = f"id_list_message={_build_message(play, value)}"
     return _remove_extra_commas(result)
 
 
@@ -309,10 +351,55 @@ class PlayConfirmType(StrEnum):
     TTS = "TTS"
 
 
+@overload
 def read_text(
     message_type: IdListMessageType,
     message_value: str,
     param_name: str,
+    send_prev_values: bool = False,
+    max_digits: int | None = None,
+    min_digits: int | None = None,
+    timeout: int | None = None,
+    play_confirm_type: PlayConfirmType | None = None,
+    block_asterisk: bool = False,
+    block_zero: bool = False,
+    replacment: tuple[str, str] | None = None,
+    allowed_values: Iterable[str | int] | None = None,
+    timout_empty_times: int | None = None,
+    replace_none: str | None = None,
+    allow_keyboard_language_change: bool = True,
+    conform: bool = True,
+    allow_empty: bool = False
+) -> str: ...
+
+
+@overload
+def read_text(
+    message_type: MessagesInput,
+    message_value: Literal[""] = "",
+    *,
+    param_name: str,
+    send_prev_values: bool = False,
+    max_digits: int | None = None,
+    min_digits: int | None = None,
+    timeout: int | None = None,
+    play_confirm_type: PlayConfirmType | None = None,
+    block_asterisk: bool = False,
+    block_zero: bool = False,
+    replacment: tuple[str, str] | None = None,
+    allowed_values: Iterable[str | int] | None = None,
+    timout_empty_times: int | None = None,
+    replace_none: str | None = None,
+    allow_keyboard_language_change: bool = True,
+    conform: bool = True,
+    allow_empty: bool = False
+) -> str: ...
+
+
+def read_text(
+    message_type: MessageInput,
+    message_value: str = "",
+    param_name: str = "",
     send_prev_values: bool = False,
     max_digits: int | None = None,
     min_digits: int | None = None,
@@ -341,10 +428,12 @@ def read_text(
         if min_digits is None:
             min_digits = in_dict["min"]
 
-    result = f"read={message_type}-{message_value}={param_name},{_true_to_str(send_prev_values)},{_none_to_str(max_digits)},{_none_to_str(min_digits)},{_none_to_str(timeout)},{_none_to_str(play_confirm_type)},{_true_to_str(block_asterisk)},{_true_to_str(block_zero)},{f"{replacment[0]}{replacment[1]}" if replacment else ""},{"".join(map(str, allowed_values)) if allowed_values else ""},{_none_to_str(timout_empty_times)},{'Ok' if allow_empty else ''},{_none_to_str(replace_none)},{'InsertLettersTypeChangeNo' if allow_keyboard_language_change is False else ''},{_false_to_str(conform)}"
+    _validate_param_name(param_name)
+    result = f"read={_build_message(message_type, message_value)}={param_name},{_true_to_str(send_prev_values)},{_none_to_str(max_digits)},{_none_to_str(min_digits)},{_none_to_str(timeout)},{_none_to_str(play_confirm_type)},{_true_to_str(block_asterisk)},{_true_to_str(block_zero)},{f"{replacment[0]}{replacment[1]}" if replacment else ""},{"".join(map(str, allowed_values)) if allowed_values else ""},{_none_to_str(timout_empty_times)},{'Ok' if allow_empty else ''},{_none_to_str(replace_none)},{'InsertLettersTypeChangeNo' if allow_keyboard_language_change is False else ''},{_false_to_str(conform)}"
     return _remove_extra_commas(result)
 
 
+@overload
 def read_record(
     message_type: IdListMessageType,
     message_value: str,
@@ -357,11 +446,45 @@ def read_record(
     marge_file: bool = False,
     max_len: int | None = None,
     min_len: int | None = None
+) -> str: ...
+
+
+@overload
+def read_record(
+    message_type: MessagesInput,
+    message_value: Literal[""] = "",
+    *,
+    param_name: str,
+    send_prev_values: bool = False,
+    file_dir: str | None = None,
+    file_name: str | None = None,
+    conform: bool = True,
+    save_hangup: bool = False,
+    marge_file: bool = False,
+    max_len: int | None = None,
+    min_len: int | None = None
+) -> str: ...
+
+
+def read_record(
+    message_type: MessageInput,
+    message_value: str = "",
+    param_name: str = "",
+    send_prev_values: bool = False,
+    file_dir: str | None = None,
+    file_name: str | None = None,
+    conform: bool = True,
+    save_hangup: bool = False,
+    marge_file: bool = False,
+    max_len: int | None = None,
+    min_len: int | None = None
 ) -> str:
-    result = f"read={message_type}-{message_value}={param_name},{_true_to_str(send_prev_values)},record,{_none_to_str(file_dir)},{_none_to_str(file_name)},{_false_to_str(conform)},{_true_to_str(save_hangup)},{_true_to_str(marge_file)},{_none_to_str(max_len)},{_none_to_str(min_len)}"
+    _validate_param_name(param_name)
+    result = f"read={_build_message(message_type, message_value)}={param_name},{_true_to_str(send_prev_values)},record,{_none_to_str(file_dir)},{_none_to_str(file_name)},{_false_to_str(conform)},{_true_to_str(save_hangup)},{_true_to_str(marge_file)},{_none_to_str(max_len)},{_none_to_str(min_len)}"
     return _remove_extra_commas(result)
 
 
+@overload
 def read_voice(
     message_type: IdListMessageType,
     message_value: str,
@@ -373,6 +496,37 @@ def read_voice(
     record: bool = False,
     max_len: int | None = None,
     min_len: int | None = None
+) -> str: ...
+
+
+@overload
+def read_voice(
+    message_type: MessagesInput,
+    message_value: Literal[""] = "",
+    *,
+    param_name: str,
+    send_prev_values: bool = False,
+    lang: str | None = None,
+    allow_keybord: bool = True,
+    max_digits: int | None = None,
+    record: bool = False,
+    max_len: int | None = None,
+    min_len: int | None = None
+) -> str: ...
+
+
+def read_voice(
+    message_type: MessageInput,
+    message_value: str = "",
+    param_name: str = "",
+    send_prev_values: bool = False,
+    lang: str | None = None,
+    allow_keybord: bool = True,
+    max_digits: int | None = None,
+    record: bool = False,
+    max_len: int | None = None,
+    min_len: int | None = None
 ) -> str:
-    result = f"read={message_type}-{message_value}={param_name},{_true_to_str(send_prev_values)},voice,{_none_to_str(lang)},{_false_to_str(allow_keybord)},{_none_to_str(max_digits)},{"record" if record else ""},{_none_to_str(max_len)},{_none_to_str(min_len)}"
+    _validate_param_name(param_name)
+    result = f"read={_build_message(message_type, message_value)}={param_name},{_true_to_str(send_prev_values)},voice,{_none_to_str(lang)},{_false_to_str(allow_keybord)},{_none_to_str(max_digits)},{"record" if record else ""},{_none_to_str(max_len)},{_none_to_str(min_len)}"
     return _remove_extra_commas(result)
