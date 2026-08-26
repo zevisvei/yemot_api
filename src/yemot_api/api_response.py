@@ -80,7 +80,7 @@ class CreditCard:
     ) -> str:
         if credit_card_enter_phone:
             credit_card_enter_phone = "EnterPhone"
-        result = f"credit_card={credit_card_type},{_none_to_str(self.billing_sum)},{_none_to_str(credit_card_register_number)},{_none_to_str(self.credit_card_max_tashloumim)},{_none_to_str(self.credit_card_currency)},{_none_to_str(credit_card_pelecard_type)},{_none_to_str(credit_card_user_name)},{_none_to_str(credit_card_terminal_number), },{_none_to_str(credit_card_password)},{_none_to_str(response)},{_none_to_str(credit_card_enter_phone)},{_none_to_str(self.credit_card_name_stt)},{_none_to_str(self.credit_card_name_stt_record_no_ask)},{_none_to_str(credit_card_create_token)},{_none_to_str(self.go_back)}"
+        result = f"credit_card={credit_card_type},{_none_to_str(self.billing_sum)},{_none_to_str(credit_card_register_number)},{_none_to_str(self.credit_card_max_tashloumim)},{_none_to_str(self.credit_card_currency)},{_none_to_str(credit_card_pelecard_type)},{_none_to_str(credit_card_user_name)},{_none_to_str(credit_card_terminal_number)},{_none_to_str(credit_card_password)},{_none_to_str(response)},{_none_to_str(credit_card_enter_phone)},{_none_to_str(self.credit_card_name_stt)},{_none_to_str(self.credit_card_name_stt_record_no_ask)},{_none_to_str(credit_card_create_token)},{_none_to_str(self.go_back)}"
         return _remove_extra_commas(result)
 
     def tranzila(self, credit_card_user_name: str, credit_card_password: str, credit_card_register_number: str | None = None) -> str:
